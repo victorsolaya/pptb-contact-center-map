@@ -136,6 +136,7 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t, theme, edit, onAdd, o
         edges: view.edges.map((e, i) => ({ id: 'e' + i, source: e.source, target: e.target, label: e.label })),
       })
       // refit only when the focus changes, not when a section is folded/unfolded
+      // refit only when focus or filters change, not after a refresh or when a box is folded
       const fitKey = `${focusId}|${hideTypes.join()}`
       if (fitted.current !== fitKey) requestAnimationFrame(() => fitView({ padding: 0.1 }))
       fitted.current = fitKey
@@ -224,6 +225,7 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [editError, setEditError] = useState(null)
   const [toast, setToast] = useState(null)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     const load = () => {
@@ -243,6 +245,8 @@ export default function App() {
   }, [])
 
   useEffect(() => { document.documentElement.lang = lang }, [lang])
+  // after a refresh the focused item may be gone (deleted in the admin center)
+  useEffect(() => { if (graph && focusId && !graph.nodes.some((n) => n.id === focusId)) setFocusId(null) }, [graph])
 
   const counts = useMemo(() => {
     const c = {}
@@ -263,6 +267,11 @@ export default function App() {
   if (!graph) return <div className="empty">{inPptb() ? t.text.noConnection : t.text.noData}</div>
   const sel = graph.nodes.find((n) => n.id === selId)
   const focus = (id) => { setFocusId(id); setSelId(id) }
+  // re-read everything from the same connection, keeping what is selected and where the map is
+  const refresh = () => {
+    setRefreshing(true)
+    loadSnapshot().then(setSnap, (e) => setError(e.message)).finally(() => setRefreshing(false))
+  }
 
   // One membership change, then re-read only memberships/users (focus and layout stay put).
   async function run(action, queue, user) {
@@ -304,6 +313,7 @@ export default function App() {
       <aside className="side">
         <div className="head">
           <h1>{graph.meta?.org}</h1>
+          <button className="refresh" title={t.text.refresh} aria-label={t.text.refresh} disabled={refreshing} onClick={refresh}>{refreshing ? '…' : '↻'}</button>
           <select aria-label={t.text.language} title={t.text.language} value={lang} onChange={(e) => { setLang(e.target.value); saveLang(e.target.value) }}>
             {Object.entries(LANGS).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
           </select>

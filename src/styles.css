@@ -130,3 +130,5 @@ button.danger { background: #dc2626; border-color: #dc2626; color: #fff; }
 button:disabled { opacity: .6; cursor: default; }
 .toast { position: absolute; z-index: 6; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--border-2); border-radius: 8px; padding: 6px 10px; box-shadow: 0 4px 16px #0003; }
 .toast .x { border: none; padding: 0 4px; }
+.side .head h1 { flex: 1; }
+.refresh { padding: 0 8px; font-size: 15px; line-height: 22px; }
