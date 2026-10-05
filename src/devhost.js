@@ -13,6 +13,7 @@ const TABLES = {
   queue: 'queues', msdyn_liveworkstream: 'workstreams', msdyn_decisioncontract: 'contracts', msdyn_decisionruleset: 'rulesets',
   msdyn_ocliveworkstreamcontextvariable: 'contextVariables', msdyn_liveworkstreamcapacityprofile: 'workstreamCapacity',
   msdyn_routingconfiguration: 'routingConfigs', msdyn_routingconfigurationstep: 'routingSteps',
+  msdyn_capacityprofile: 'capacityProfiles', msdyn_operatinghour: 'operatingHours',
 }
 const LOOKUPS = {
   queue: [['msdyn_operatinghourid', 'msdyn_operatinghour']],
@@ -42,6 +43,24 @@ export async function installFakeHost() {
       getCurrentTheme: async () => (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
     },
     fileSystem: { saveFile: async (name) => (console.info('[fake saveFile]', name), name) },
+  }
+  // Applies a create/update body the way Dataverse would: lookups (bound, or cleared with null) land in
+  // their _x_value column with the target's name as label; option values reuse a label already seen.
+  const write = (entity, row, record) => {
+    for (const [key, value] of Object.entries(record)) {
+      const nav = /^(\w+?)(@odata\.bind)?$/.exec(key)[1]
+      const lookup = (LOOKUPS[entity] ?? []).find(([attr]) => attr === nav)
+      if (lookup) {
+        const target = value && /\(([^)]+)\)/.exec(value)[1]
+        const ref = target && table(lookup[1]).find((r) => r[idField(lookup[1])] === target)
+        Object.assign(row, { [`_${nav}_value`]: target ?? null, [`_${nav}_value${FV}`]: ref?.msdyn_name ?? ref?.name ?? target ?? null })
+      } else {
+        row[key] = value
+        const label = table(entity).find((r) => r !== row && r[key] === value && r[key + FV])?.[key + FV]
+        row[key + FV] = label ?? (typeof value === 'boolean' ? (value ? 'Yes' : 'No') : undefined)
+      }
+    }
+    return row
   }
   globalThis.dataverseAPI = {
     queryData: async (q) => {
@@ -73,23 +92,13 @@ export async function installFakeHost() {
     },
     update: async (entity, id, record) => {
       if (location.search.includes('stale')) throw new Error('simulated concurrent edit')
-      Object.assign(table(entity).find((r) => r[idField(entity)] === id), record)
+      write(entity, table(entity).find((r) => r[idField(entity)] === id), record)
     },
     create: async (entity, record) => {
       if (location.search.includes('failws') && entity === 'msdyn_routingconfiguration') throw new Error('403 missing prvCreatemsdyn_routingconfiguration (simulated)')
-      const id = crypto.randomUUID()
+      const id = record[idField(entity)] ?? crypto.randomUUID()
       const rows = table(entity)
-      const row = { [idField(entity)]: id }
-      for (const [key, value] of Object.entries(record)) {
-        const lookup = /^(\w+)@odata\.bind$/.exec(key)
-        if (lookup) row[`_${lookup[1]}_value`] = /\(([^)]+)\)/.exec(value)[1]
-        else {
-          row[key] = value
-          // reuse Dataverse's label for the same option value from an existing row
-          const label = rows.find((r) => r[key] === value && r[key + FV])?.[key + FV]
-          if (label) row[key + FV] = label
-        }
-      }
+      const row = write(entity, { [idField(entity)]: id }, record)
       if (entity === 'queue') Object.assign(row, { _msdyn_prequeueoverflowrulesetid_value: null, _msdyn_inqueueoverflowrulesetid_value: null })
       rows.push(row)
       if (entity === 'msdyn_liveworkstream') row.statecode = 0

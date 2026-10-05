@@ -1,6 +1,7 @@
 // Turns the raw Web API rows (one entry per QUERIES key in queries.js) into { meta, nodes, edges }.
 import { parseRules, normGuid, simplify } from './rules.js'
 import { rulesetKind } from './edit.js'
+import { PROFILE_BASED } from './details.js'
 import { LANGS } from './i18n.js'
 
 const fv = (r, f) => r[`${f}@OData.Community.Display.V1.FormattedValue`] ?? r[f]
@@ -52,13 +53,18 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
   }
   for (const c of rows(raw, 'capacityProfiles'))
     node('capacity', c.msdyn_capacityprofileid, c.msdyn_name, t.text.max(c.msdyn_defaultmaxunits), { [F.maxUnits]: c.msdyn_defaultmaxunits, [F.blockAssignment]: fv(c, 'msdyn_blockassignment') })
+  // profile-based workstreams: the linked profiles say the capacity, the units column is unused
+  const profilesOf = (wsGuid) => rows(raw, 'workstreamCapacity').filter((l) => normGuid(l._msdyn_workstream_id_value) === normGuid(wsGuid))
+    .map((l) => nodes.get(key('capacity', l._msdyn_capacityprofile_id_value))?.label).filter(Boolean).join(', ')
   for (const w of rows(raw, 'workstreams'))
     node('workstream', w.msdyn_liveworkstreamid, w.msdyn_name, t.text.wsSub(fv(w, 'msdyn_streamsource'), fv(w, 'msdyn_workdistributionmode'), Boolean(w.statecode)), {
       [F.channel]: fv(w, 'msdyn_streamsource'),
       [F.distribution]: fv(w, 'msdyn_workdistributionmode'),
       [F.mode]: fv(w, 'msdyn_mode'),
       [F.direction]: fv(w, 'msdyn_direction'),
-      [F.capacityRequired]: `${w.msdyn_capacityrequired} (${fv(w, 'msdyn_capacityformat')})`,
+      [F.capacityRequired]: w.msdyn_capacityformat === PROFILE_BASED
+        ? [fv(w, 'msdyn_capacityformat'), profilesOf(w.msdyn_liveworkstreamid)].filter(Boolean).join(': ')
+        : `${w.msdyn_capacityrequired} (${fv(w, 'msdyn_capacityformat')})`,
       [F.defaultQueue]: fv(w, '_msdyn_defaultqueue_value'),
       [F.bot]: fv(w, '_msdyn_bot_user_value'),
       [F.status]: fv(w, 'statecode'),

@@ -6,7 +6,8 @@ import { TYPES, SECTIONS, neighborhood, toMermaid, foldIntoQueues } from './grap
 import { buildGraph } from './build.js'
 import { inPptb, loadFromPptb, saveFile, copyText, currentTheme, notify } from './pptb.js'
 import { addMember, removeMember, createQueue, deleteQueue, appendRule, removeRule, buildRuleXml, writeRuleset, MEMBER_TABLES, QUEUE_TABLES, RULE_TABLES } from './edit.js'
-import { EditDialog, Toast, QueueDialog, RuleDialog, RemoveRuleDialog, WorkstreamDialog } from './EditDialog.jsx'
+import { EditDialog, Toast, QueueDialog, RuleDialog, RemoveRuleDialog, WorkstreamDialog, DetailsForm, DetailsDialog } from './EditDialog.jsx'
+import { recordOf, runSteps, undoAll, DETAIL_TABLES } from './details.js'
 import { createWorkstream, deleteCreated, WORKSTREAM_TABLES } from './workstream.js'
 import { normGuid } from './rules.js'
 import { LANGS, initialLang, saveLang } from './i18n.js'
@@ -233,6 +234,7 @@ export default function App() {
   const [editError, setEditError] = useState(null)
   const [toast, setToast] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [editingId, setEditingId] = useState(null) // node whose details are being edited in the detail panel
 
   useEffect(() => {
     const load = () => {
@@ -244,6 +246,7 @@ export default function App() {
       setDialog(null)
       setToast(null)
       setEdit(false)
+      setEditingId(null)
       loadSnapshot().then(setSnap, (e) => setError(e.message))
     }
     load()
@@ -289,12 +292,12 @@ export default function App() {
     if (part) setSnap((s) => s && { ...s, raw: { ...s.raw, ...part.raw } }) // s is undefined if the connection changed meanwhile
   }
   const errText = (e) => {
-    const known = { stale: t.edit.stale, badDefinition: t.edit.badDefinition, ruleNotFound: t.edit.ruleNotFound }[e?.code]
+    const known = { stale: t.edit.stale, staleRecord: t.edit.staleRecord, badDefinition: t.edit.badDefinition, ruleNotFound: t.edit.ruleNotFound }[e?.code]
     if (known) return known
     const message = String(e?.message ?? e)
     // multi-record creates clean up after themselves; say whether that worked
     if (e?.code === 'rolledBack') return `${message}. ${t.edit.rolledBack}`
-    if (e?.code === 'partial') return `${message}. ${t.edit.partial(e.leftovers.map((r) => `${r.entity} ${r.id}`).join(', '))}`
+    if (e?.code === 'partial') return `${message}. ${t.edit.partial(e.leftovers.map((r) => r.label ?? `${r.entity} ${r.id}`).join(', '))}`
     return message
   }
   // `change` applies one change and returns the function that reverts it (offered as Undo).
@@ -362,6 +365,18 @@ export default function App() {
         if (remaining.length) throw Object.assign(new Error(t.edit.failed), { code: 'partial', leftovers: remaining })
       }
     }, t.edit.wsCreated(name))
+  // Details edited in the detail panel; a retried undo only redoes the steps an earlier attempt could not
+  const applyDetails = (node, plan) =>
+    perform(async () => {
+      let remaining = await runSteps(plan.steps)
+      await refreshTables(DETAIL_TABLES[node.type])
+      setEditingId(null)
+      return async () => {
+        remaining = await undoAll(remaining)
+        await refreshTables(DETAIL_TABLES[node.type])
+        if (remaining.length) throw Object.assign(new Error(t.edit.failed), { code: 'partial', leftovers: remaining })
+      }
+    }, t.edit.saved(plan.changes.find((c) => /^(msdyn_)?name$/.test(c.col))?.to ?? node.label))
   const openDialog = (d) => { setEditError(null); setDialog(d) }
   async function undo() {
     setBusy(true)
@@ -456,12 +471,20 @@ export default function App() {
           <button className="close" onClick={() => setSelId(null)}>×</button>
           <div className="kind" style={{ background: TYPES[sel.type]?.color }}>{t.types[sel.type]}</div>
           <h2>{sel.label}</h2>
-          {sel.id !== focusId && <button onClick={() => focus(sel.id)}>{t.text.centerHere}</button>}
-          <dl>
-            {Object.entries(sel.data ?? {}).filter(([, v]) => v != null && v !== '').map(([k, v]) => (
-              <div key={k}><dt>{k}</dt><dd>{typeof v === 'object' ? JSON.stringify(v, null, 1) : String(v)}</dd></div>
-            ))}
-          </dl>
+          <div className="detail-actions">
+            {sel.id !== focusId && <button onClick={() => focus(sel.id)}>{t.text.centerHere}</button>}
+            {edit && editingId !== sel.id && recordOf(snap.raw, sel) && <button className="primary" onClick={() => setEditingId(sel.id)}>✎ {t.edit.editDetails}</button>}
+          </div>
+          {edit && editingId === sel.id ? (
+            <DetailsForm key={sel.id} node={sel} raw={snap.raw} queues={queueOptions} t={t} onCancel={() => setEditingId(null)}
+              onReview={(plan) => openDialog({ kind: 'details', node: sel, plan })} />
+          ) : (
+            <dl>
+              {Object.entries(sel.data ?? {}).filter(([, v]) => v != null && v !== '').map(([k, v]) => (
+                <div key={k}><dt>{k}</dt><dd>{typeof v === 'object' ? JSON.stringify(v, null, 1) : String(v)}</dd></div>
+              ))}
+            </dl>
+          )}
         </aside>
       )}
       {(dialog?.kind === 'add' || dialog?.kind === 'confirm') && (
@@ -476,6 +499,10 @@ export default function App() {
       {dialog?.kind === 'rule' && (
         <RuleDialog ruleset={dialog.ruleset} raw={snap.raw} queues={queueOptions} org={snap.org} env={snap.environment} busy={busy} error={editError}
           onApply={(rule) => applyRule(dialog.ruleset, rule)} onBack={() => setEditError(null)} onClose={() => setDialog(null)} t={t} />
+      )}
+      {dialog?.kind === 'details' && (
+        <DetailsDialog node={dialog.node} plan={dialog.plan} raw={snap.raw} queues={queueOptions} org={snap.org} env={snap.environment} busy={busy} error={editError}
+          onApply={() => applyDetails(dialog.node, dialog.plan)} onBack={() => setDialog(null)} onClose={() => { setDialog(null); setEditingId(null) }} t={t} />
       )}
       {dialog?.kind === 'removeRule' && (
         <RemoveRuleDialog rule={dialog.rule} ruleset={dialog.ruleset} org={snap.org} env={snap.environment} busy={busy} error={editError}

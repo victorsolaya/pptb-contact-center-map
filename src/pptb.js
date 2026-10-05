@@ -45,10 +45,12 @@ async function entitySet(entity) {
   if (!setCache.has(entity)) setCache.set(entity, (await dataverseAPI.queryData(`EntityDefinitions(LogicalName='${entity}')?$select=EntitySetName`)).EntitySetName)
   return setCache.get(entity)
 }
-// `{ "<navigation property>@odata.bind": "/<entity set>(<id>)" }` for a lookup column
+// `{ "<navigation property>@odata.bind": "/<entity set>(<id>)" }` for a lookup column;
+// id null clears it (`{ "<navigation property>": null }`, the documented PATCH form).
 export async function bind(entity, attribute, id) {
   const rel = (await relationships(entity)).find((r) => r.ReferencingAttribute === attribute)
   if (!rel) throw new Error(`${entity}.${attribute} is not a lookup in this environment`)
+  if (id == null) return { [rel.ReferencingEntityNavigationPropertyName]: null }
   return { [`${rel.ReferencingEntityNavigationPropertyName}@odata.bind`]: `/${await entitySet(rel.ReferencedEntity)}(${normGuid(id)})` }
 }
 

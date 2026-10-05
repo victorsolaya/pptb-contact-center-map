@@ -142,10 +142,10 @@ button:hover { background: var(--hover); }
 .dialog-head small { color: var(--muted); }
 .dialog-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
 .dialog-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border); background: var(--bg); }
-.dialog input, .dialog select { padding: 7px 9px; border: 1px solid var(--border-2); border-radius: 7px; background: var(--panel); color: var(--text); font: inherit; min-width: 0; }
-.dialog input:focus, .dialog select:focus { outline: none; border-color: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 22%, transparent); }
+.dialog input, .dialog select, .details-form input:not([type="checkbox"]), .details-form select { padding: 7px 9px; border: 1px solid var(--border-2); border-radius: 7px; background: var(--panel); color: var(--text); font: inherit; min-width: 0; }
+.dialog input:focus, .dialog select:focus, .details-form input:focus, .details-form select:focus { outline: none; border-color: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 22%, transparent); }
 .dialog p { margin: 0; }
-.dialog .field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.dialog .field, .details-form .field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text-2); }
 .dialog .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .dialog .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 4px; }
 .dialog .cond-list { display: flex; flex-direction: column; gap: 6px; }
@@ -155,14 +155,14 @@ button:hover { background: var(--hover); }
 .dialog .and { display: inline-block; margin: 0 0 4px 4px; font-size: 10px; font-weight: 700; letter-spacing: .05em; color: #7c3aed; background: #7c3aed1a; border-radius: 8px; padding: 1px 7px; }
 .dialog .then-box { border: 1px solid #16a34a55; background: #16a34a0d; border-radius: 9px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 .dialog .verb { flex: none; font-size: 12px; font-weight: 700; color: var(--text-2); }
-.dialog .link { align-self: flex-start; border: none; background: none; padding: 0; color: #2563eb; font-weight: 600; }
-:root[data-theme="dark"] .dialog .link { color: #60a5fa; }
+.dialog .link, .details-form .link { align-self: flex-start; border: none; background: none; padding: 0; color: #2563eb; font-weight: 600; }
+:root[data-theme="dark"] .dialog .link, :root[data-theme="dark"] .details-form .link { color: #60a5fa; }
 .dialog .preview { font-size: 14px; }
 .dialog .target { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .dialog .prod { background: #dc2626; color: #fff; padding: 8px 10px; border-radius: 7px; font-weight: 600; }
-.dialog .err { color: #dc2626; font-size: 12px; word-break: break-word; background: #dc26260f; border: 1px solid #dc262640; border-radius: 7px; padding: 6px 8px; }
-.dialog .muted { color: var(--muted); }
-.dialog .small { font-size: 12px; }
+.dialog .err, .details-form .err { color: #dc2626; font-size: 12px; word-break: break-word; background: #dc26260f; border: 1px solid #dc262640; border-radius: 7px; padding: 6px 8px; }
+.dialog .muted, .details-form .muted { color: var(--muted); }
+.dialog .small, .details-form .small { font-size: 12px; }
 
 /* change previews look like the cards on the map */
 .card-preview { border: 2px solid; border-radius: 9px; padding: 8px 12px; display: flex; flex-direction: column; gap: 3px; background: var(--panel); }
@@ -202,7 +202,7 @@ button:disabled { opacity: .55; cursor: default; }
 @keyframes pop { from { opacity: 0; transform: translateY(6px) scale(.98); } }
 @keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } }
 .toast button { white-space: nowrap; }
-.dialog .check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.dialog .check, .details-form .check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .dialog .records { margin: 0; padding: 10px 12px 10px 30px; border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent); background: color-mix(in srgb, var(--tone) 6%, transparent); border-radius: 9px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 
 /* "Create" panel shown in edit mode */
@@ -215,3 +215,18 @@ button:disabled { opacity: .55; cursor: default; }
 .create-tile .tile-icon { flex: none; width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 13px; color: #fff; }
 .create-tile.queue .tile-icon { background: #f59e0b; }
 .create-tile.workstream .tile-icon { background: #6366f1; }
+
+/* Details edited in the detail panel (edit mode) */
+.detail-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.details-form { --tone: #2563eb; display: flex; flex-direction: column; gap: 12px; margin-top: 8px; padding: 12px; border: 1px solid #2563eb55; background: #2563eb0a; border-radius: 10px; }
+.details-form input:not([type="checkbox"]), .details-form select { width: 100%; box-sizing: border-box; }
+.details-form .check { align-items: flex-start; font-weight: 400; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border-2); border-radius: 8px; overflow: hidden; }
+.seg button { border: none; border-radius: 0; background: var(--panel); font-weight: 600; padding: 6px 4px; }
+.seg button + button { border-left: 1px solid var(--border-2); }
+.seg button.on { background: #2563eb; color: #fff; }
+.profiles { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.new-profile { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px dashed #2563eb88; border-radius: 8px; }
+.form-foot { display: flex; justify-content: flex-end; gap: 6px; }
+.changes .from { color: var(--muted); text-decoration: line-through; }
+.changes .to { font-weight: 700; }

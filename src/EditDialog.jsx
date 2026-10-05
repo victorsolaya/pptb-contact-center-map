@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { searchUsers, readContract, contractVariables, newId } from './edit.js'
 import { parseRules, simplify } from './rules.js'
 import { templates, planWorkstream, formatted } from './workstream.js'
+import { initialForm, planDetails, profileUse, UNIT_BASED, PROFILE_BASED } from './details.js'
+import { normGuid } from './rules.js'
 
 // Every dialog previews the change and names the org and the environment before applying it
 // (PPTB marketplace policy for tools that modify data); Production gets an extra warning.
 
-const TONE = { add: '#16a34a', remove: '#dc2626', queue: '#f59e0b', rule: '#d946ef', workstream: '#6366f1' }
-const ICON = { add: '+', remove: '×', queue: '▤', rule: '◆', workstream: '⇄' }
+const TONE = { add: '#16a34a', remove: '#dc2626', queue: '#f59e0b', rule: '#d946ef', workstream: '#6366f1', details: '#2563eb' }
+const ICON = { add: '+', remove: '×', queue: '▤', rule: '◆', workstream: '⇄', details: '✎' }
 
 function Modal({ tone, title, subtitle, footer, onClose, children }) {
   return (
@@ -107,7 +109,7 @@ export function Toast({ toast, onUndo, onClose, busy, t }) {
 // ---------------------------------------------------------------- new queue
 
 // distinct option values already used in the org, with Dataverse's own (localized) label
-const FV = '@OData.Community.Display.V1.FormattedValue'
+const FV ='@OData.Community.Display.V1.FormattedValue'
 const usedOptions = (rows, field) => [...new Map(rows.filter((r) => r[field] != null).map((r) => [r[field], r[field + FV] ?? String(r[field])])).entries()]
 
 // Type and assignment method only offer values that existing omnichannel queues already use.
@@ -400,6 +402,144 @@ export function WorkstreamDialog({ raw, org, env, busy, error, onApply, onBack, 
       {plan.skippedSteps > 0 && <p className="muted small">{t.edit.recSkipped}</p>}
       {plan.unknownSteps > 0 && <p className="err">{t.edit.routeUnknown}</p>}
       <p className="muted small">{t.edit.wsNotes}</p>
+      <Target org={org} env={env} error={error} t={t} />
+    </Modal>
+  )
+}
+
+// ---------------------------------------------------------------- edit details
+
+const list = (raw, key) => (Array.isArray(raw[key]) ? raw[key] : [])
+const LABELS = (t) => ({
+  msdyn_name: t.edit.name, name: t.edit.name, msdyn_capacityformat: t.edit.capacity, msdyn_capacityrequired: t.edit.unitsRequired,
+  _msdyn_defaultqueue_value: t.fields.defaultQueue, msdyn_priority: t.edit.priority, _msdyn_operatinghourid_value: t.edit.hours,
+  msdyn_defaultmaxunits: t.fields.maxUnits, msdyn_blockassignment: t.fields.blockAssignment,
+})
+const profileName = (raw, id) => list(raw, 'capacityProfiles').find((p) => normGuid(p.msdyn_capacityprofileid) === normGuid(id))?.msdyn_name ?? id
+function shown(col, v, raw, queues, t) {
+  if (v == null || v === '') return t.edit.none
+  if (col === 'msdyn_capacityformat') return v === PROFILE_BASED ? t.edit.byProfile : t.edit.byUnits
+  if (col === '_msdyn_defaultqueue_value') return queues.find((q) => q.id === v)?.label ?? v
+  if (col === '_msdyn_operatinghourid_value') return list(raw, 'operatingHours').find((h) => normGuid(h.msdyn_operatinghourid) === v)?.msdyn_name ?? v
+  if (typeof v === 'boolean') return v ? t.edit.yes : t.edit.no
+  return String(v)
+}
+const whole = (v, min) => Number.isInteger(v) && v >= min
+const num = (v) => (v === '' ? null : Number(v))
+
+// Shown in the detail panel instead of the read-only list. Options come from what the org has
+// (queues, operating hours, capacity profiles); "Review changes" opens the confirmation.
+export function DetailsForm({ node, raw, queues, t, onReview, onCancel }) {
+  const [initial] = useState(() => initialForm(raw, node))
+  const [form, setForm] = useState(initial)
+  const set = (patch) => setForm((f) => ({ ...f, ...patch }))
+  const nameCol = node.type === 'queue' ? 'name' : 'msdyn_name'
+  const clean = { ...form, [nameCol]: (form[nameCol] ?? '').trim() }
+  const plan = planDetails(raw, node, clean)
+  const byProfile = form.msdyn_capacityformat === PROFILE_BASED
+  const np = form.newProfile
+  const setNp = (patch) => set({ newProfile: { ...np, ...patch } })
+  const noProfile = node.type === 'workstream' && byProfile && !form.profiles.length && !np
+  const valid = clean[nameCol] && !noProfile && (
+    node.type === 'workstream' ? (byProfile || whole(form.msdyn_capacityrequired, 0)) && (!np || (np.name.trim() && whole(np.units, 1)))
+    : node.type === 'queue' ? whole(form.msdyn_priority, 0)
+    : whole(form.msdyn_defaultmaxunits, 1))
+  const number = (col, min) => <input type="number" min={min} value={form[col] ?? ''} onChange={(e) => set({ [col]: num(e.target.value) })} />
+
+  return (
+    <div className="details-form">
+      <label className="field">{t.edit.name}<input autoFocus value={form[nameCol] ?? ''} onChange={(e) => set({ [nameCol]: e.target.value })} /></label>
+      {node.type === 'workstream' && (
+        <>
+          <label className="field">{t.fields.defaultQueue}
+            <select value={form._msdyn_defaultqueue_value ?? ''} onChange={(e) => set({ _msdyn_defaultqueue_value: e.target.value || null })}>
+              {!initial._msdyn_defaultqueue_value && <option value="">{t.edit.none}</option>}
+              {queues.map((q) => <option key={q.id} value={q.id}>{q.label}</option>)}
+            </select>
+          </label>
+          <div className="field">{t.edit.capacity}
+            <div className="seg" role="radiogroup" aria-label={t.edit.capacity}>
+              {[[UNIT_BASED, t.edit.byUnits], [PROFILE_BASED, t.edit.byProfile]].map(([v, l]) => (
+                <button key={v} role="radio" aria-checked={form.msdyn_capacityformat === v} className={form.msdyn_capacityformat === v ? 'on' : ''} onClick={() => set({ msdyn_capacityformat: v })}>{l}</button>
+              ))}
+            </div>
+          </div>
+          {byProfile ? (
+            <div className="profiles">
+              {list(raw, 'capacityProfiles').map((p) => {
+                const id = normGuid(p.msdyn_capacityprofileid)
+                const on = form.profiles.includes(id)
+                return (
+                  <label key={id} className="check">
+                    <input type="checkbox" checked={on} onChange={() => set({ profiles: on ? form.profiles.filter((x) => x !== id) : [...form.profiles, id] })} />
+                    <span>{p.msdyn_name} <small className="muted">{t.text.max(p.msdyn_defaultmaxunits)}</small></span>
+                  </label>
+                )
+              })}
+              {np ? (
+                <div className="new-profile">
+                  <label className="field">{t.edit.newProfileName}<input autoFocus value={np.name} onChange={(e) => setNp({ name: e.target.value })} /></label>
+                  <label className="field">{t.fields.maxUnits}<input type="number" min="1" value={np.units ?? ''} onChange={(e) => setNp({ units: num(e.target.value) })} /></label>
+                  <label className="check"><input type="checkbox" checked={np.block} onChange={(e) => setNp({ block: e.target.checked })} /> {t.fields.blockAssignment}</label>
+                  <button className="link" onClick={() => set({ newProfile: null })}>{t.edit.cancel}</button>
+                </div>
+              ) : (
+                <button className="link" onClick={() => set({ newProfile: { id: crypto.randomUUID(), name: '', units: 1, block: true } })}>{t.edit.newProfile}</button>
+              )}
+              {noProfile && <p className="err">{t.edit.needProfile}</p>}
+            </div>
+          ) : (
+            <label className="field">{t.edit.unitsRequired}{number('msdyn_capacityrequired', 0)}</label>
+          )}
+          <p className="muted small">{t.edit.fixedNote}</p>
+        </>
+      )}
+      {node.type === 'queue' && (
+        <>
+          <label className="field">{t.edit.priority}{number('msdyn_priority', 0)}</label>
+          <label className="field">{t.edit.hours}
+            <select value={form._msdyn_operatinghourid_value ?? ''} onChange={(e) => set({ _msdyn_operatinghourid_value: e.target.value || null })}>
+              <option value="">{t.edit.none}</option>
+              {list(raw, 'operatingHours').map((h) => <option key={h.msdyn_operatinghourid} value={normGuid(h.msdyn_operatinghourid)}>{h.msdyn_name}</option>)}
+            </select>
+          </label>
+        </>
+      )}
+      {node.type === 'capacity' && (
+        <>
+          <label className="field">{t.fields.maxUnits}{number('msdyn_defaultmaxunits', 1)}</label>
+          <label className="check"><input type="checkbox" checked={!!form.msdyn_blockassignment} onChange={(e) => set({ msdyn_blockassignment: e.target.checked })} /> {t.fields.blockAssignment}</label>
+          <p className="muted small">{t.edit.profileScope(profileUse(raw, node.id.split(':')[1]))}</p>
+        </>
+      )}
+      <div className="form-foot">
+        <button onClick={onCancel}>{t.edit.cancel}</button>
+        <button className="primary" disabled={!valid || !plan.steps.length} onClick={() => onReview(plan)}>{t.edit.review}</button>
+      </div>
+    </div>
+  )
+}
+
+// Before/after of every field, plus the capacity profile links and records that will be written.
+export function DetailsDialog({ node, plan, raw, queues, org, env, busy, error, onApply, onBack, onClose, t }) {
+  const label = LABELS(t)
+  return (
+    <Modal tone="details" title={t.edit.detailsTitle(node.label)} subtitle={t.types[node.type]} onClose={() => !busy && onClose()}
+      footer={<>
+        <button disabled={busy} onClick={onBack}>{t.edit.back}</button>
+        <button disabled={busy} onClick={onClose}>{t.edit.cancel}</button>
+        <button className="primary" disabled={busy} onClick={onApply}>{busy ? t.edit.working : t.edit.save}</button>
+      </>}>
+      <p className="preview">{t.edit.confirmDetails}</p>
+      <ul className="records changes">
+        {plan.changes.map((c) => (
+          <li key={c.col}><b>{label[c.col]}</b>: <span className="from">{shown(c.col, c.from, raw, queues, t)}</span> → <span className="to">{shown(c.col, c.to, raw, queues, t)}</span></li>
+        ))}
+        {plan.unlink.map((l) => <li key={l.msdyn_liveworkstreamcapacityprofileid}>{t.edit.unlinkProfile(profileName(raw, l._msdyn_capacityprofile_id_value))}</li>)}
+        {plan.newProfile && <li>{t.edit.createProfile(plan.newProfile.name.trim(), plan.newProfile.units)}</li>}
+        {plan.link.map((id) => <li key={id}>{t.edit.linkProfile(profileName(raw, id))}</li>)}
+      </ul>
+      {node.type === 'capacity' && <p className="muted small">{t.edit.profileScope(profileUse(raw, node.id.split(':')[1]))}</p>}
       <Target org={org} env={env} error={error} t={t} />
     </Modal>
   )
