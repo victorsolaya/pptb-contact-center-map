@@ -278,7 +278,7 @@ export default function App() {
       await run(action, queue, user)
       const text = action === 'add' ? t.edit.added(user.label, queue.label) : t.edit.removed(user.label, queue.label)
       notify(t.edit.mode, `${text} · ${snap.org} (${snap.environment})`, 'success')
-      setToast({ text, undo: () => run(action === 'add' ? 'remove' : 'add', queue, user) })
+      setToast({ text: `${text} · ${snap.org} (${snap.environment})`, undo: () => run(action === 'add' ? 'remove' : 'add', queue, user) })
       setDialog(null)
     } catch (e) {
       setEditError(String(e?.message ?? e))
