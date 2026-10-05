@@ -14,6 +14,7 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 - Every box inside a queue card (operating hours, PreQueue, InQueue, agents) can be minimized with its **−/+** button, or all at once from the toolbar.
 - One click on a card highlights its incoming path and everything below it; click the background to clear.
 - **Export PNG** for documents and **Copy Mermaid** for wikis or Markdown.
+- Follows the ToolBox light and dark theme.
 - Available in English, Spanish, Portuguese, French, German and Italian. The language follows your system and can be changed in the sidebar. Values coming from Dataverse (option sets, lookups) use the language of the connected user.
 
 ## Usage
@@ -27,6 +28,10 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 The tool only reads data. The connected user (or application user) needs read access to the Omnichannel configuration tables, such as `msdyn_liveworkstream`, `msdyn_routingconfiguration`, `msdyn_decisionruleset`, `msdyn_assignmentconfiguration`, `queue`, `queuemembership`, `systemuser`, `msdyn_operatinghour`, `msdyn_overflowactionconfig` and the channel tables.
 
 If a table cannot be read, the map is still drawn and the sidebar lists which tables failed and why.
+
+## What this tool changes
+
+Nothing. Contact Center Map is read-only: it only runs `GET` queries against the Dataverse Web API and never creates, updates or deletes records.
 
 ## Privacy
 
@@ -47,6 +52,14 @@ npm test        # parser, graph, i18n and ToolBox adapter checks
 
 To try it locally in the desktop app: **Settings → Show Debug Menu**, then **Debug → Load Local Tool** and select this folder.
 
+## AI-assisted development
+
+Parts of this tool were generated with Claude Code (Anthropic) and reviewed, tested, and maintained by the contributors listed in package.json.
+
 ## License
 
-MIT
+MIT. The bundle includes third-party code under its own licenses:
+
+- [React](https://github.com/facebook/react) and [React Flow](https://github.com/xyflow/xyflow): MIT
+- [html-to-image](https://github.com/bubkoo/html-to-image): MIT
+- [elkjs](https://github.com/kieler/elkjs) (Eclipse Layout Kernel): EPL-2.0. Source code is available at the linked repository.

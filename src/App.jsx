@@ -4,18 +4,23 @@ import ELK from 'elkjs/lib/elk.bundled.js'
 import { toPng } from 'html-to-image'
 import { TYPES, SECTIONS, neighborhood, toMermaid, foldIntoQueues } from './graph.js'
 import { buildGraph } from './build.js'
-import { inPptb, loadFromPptb, saveFile, copyText } from './pptb.js'
+import { inPptb, loadFromPptb, saveFile, copyText, currentTheme } from './pptb.js'
 import { LANGS, initialLang, saveLang } from './i18n.js'
 
 // Power Platform ToolBox: the host's active connection. `npm run dev`: dev/raw.json (gitignored,
 // a saved Web API snapshot of a real org). null = nothing to show yet.
 async function loadSnapshot() {
   if (inPptb()) return loadFromPptb()
+  if (!import.meta.env.DEV) return null // published build: data only ever comes from ToolBox
   const r = await fetch('dev/raw.json')
   return r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null
 }
 
 const elk = new ELK()
+const EDGE = {
+  light: { stroke: '#94a3b8', label: '#475569', labelBg: '#ffffff', lit: '#1e293b', png: '#ffffff' },
+  dark: { stroke: '#64748b', label: '#cbd5e1', labelBg: '#111827', lit: '#e5e7eb', png: '#0b1120' },
+}
 const stop = (fn) => (e) => { e.stopPropagation(); fn() }
 
 // −/+ button; class "min" is left out of the PNG export
@@ -88,7 +93,7 @@ async function layout(view, size) {
   return new Map(res.children.map((c) => [c.id, { x: c.x, y: c.y }]))
 }
 
-function Diagram({ graph, focusId, hideTypes, onSelect, t }) {
+function Diagram({ graph, focusId, hideTypes, onSelect, t, theme }) {
   const [flow, setFlow] = useState({ nodes: [], edges: [] })
   const [open, setOpen] = useState(new Map()) // `${nodeId}:${section}` -> bool
   const [hi, setHi] = useState(null) // clicked node: light up what it relates to
@@ -119,13 +124,7 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t }) {
       if (!live) return
       setFlow({
         nodes: view.nodes.map((n) => ({ id: n.id, type: 'cc', position: pos.get(n.id), ...size.get(n.id), data: dataFor(n) })),
-        // literal colors (not React Flow's CSS vars) so html-to-image keeps edges in the PNG
-        edges: view.edges.map((e, i) => ({
-          id: 'e' + i, source: e.source, target: e.target, label: e.label,
-          style: { stroke: '#94a3b8', strokeWidth: 1.5 },
-          labelStyle: { fill: '#475569', fontSize: 10 },
-          labelBgStyle: { fill: '#ffffff' },
-        })),
+        edges: view.edges.map((e, i) => ({ id: 'e' + i, source: e.source, target: e.target, label: e.label })),
       })
       // refit only when the focus changes, not when a section is folded/unfolded
       if (fitted.current !== view) requestAnimationFrame(() => fitView({ padding: 0.1 }))
@@ -136,22 +135,28 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t }) {
 
   // One click lights up the clicked card's incoming path and the whole tree below it; the rest fades.
   useEffect(() => setHi(null), [view])
+  // Edge colors are literal per theme (not React Flow's CSS vars) so html-to-image keeps them in the PNG.
   const shown = useMemo(() => {
-    if (!hi || !view?.nodes.some((n) => n.id === hi)) return flow
-    const lit = new Set(neighborhood(view, hi).nodes.map((n) => n.id))
-    const on = (e) => lit.has(e.source) && lit.has(e.target)
+    const c = EDGE[theme]
+    const lit = hi && view?.nodes.some((n) => n.id === hi) ? new Set(neighborhood(view, hi).nodes.map((n) => n.id)) : null
+    const on = (e) => !lit || (lit.has(e.source) && lit.has(e.target))
     return {
-      nodes: flow.nodes.map((n) => ({ ...n, className: lit.has(n.id) ? 'lit' : 'dim' })),
-      edges: flow.edges.map((e) => ({ ...e, style: on(e) ? { stroke: '#1e293b', strokeWidth: 2.5 } : { ...e.style, opacity: 0.12 }, labelStyle: { ...e.labelStyle, opacity: on(e) ? 1 : 0.2 } })),
+      nodes: lit ? flow.nodes.map((n) => ({ ...n, className: lit.has(n.id) ? 'lit' : 'dim' })) : flow.nodes,
+      edges: flow.edges.map((e) => ({
+        ...e,
+        style: lit && on(e) ? { stroke: c.lit, strokeWidth: 2.5 } : { stroke: c.stroke, strokeWidth: 1.5, opacity: on(e) ? 1 : 0.12 },
+        labelStyle: { fill: c.label, fontSize: 10, opacity: on(e) ? 1 : 0.2 },
+        labelBgStyle: { fill: c.labelBg },
+      })),
     }
-  }, [flow, hi, view])
+  }, [flow, hi, view, theme])
 
   async function exportPng() {
     const b = getNodesBounds(getNodes()), pad = 40
     const width = b.width + pad * 2, height = b.height + pad * 2
     // ponytail: pixelRatio 2 fixed; huge graphs can exceed browser canvas limits -> lower it if export comes out blank
     const url = await toPng(document.querySelector('.react-flow__viewport'), {
-      backgroundColor: '#ffffff', width, height, pixelRatio: 2,
+      backgroundColor: EDGE[theme].png, width, height, pixelRatio: 2,
       filter: (el) => !el.classList?.contains('min'),
       style: { width: width + 'px', height: height + 'px', transform: `translate(${pad - b.x}px, ${pad - b.y}px) scale(1)` },
     })
@@ -176,6 +181,7 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t }) {
         nodes={shown.nodes}
         edges={shown.edges}
         nodeTypes={nodeTypes}
+        colorMode={theme}
         onNodeClick={(_, n) => { onSelect(n.id); setHi((h) => (h === n.id ? null : n.id)) }}
         onPaneClick={() => setHi(null)}
         zoomOnDoubleClick={false}
@@ -195,6 +201,7 @@ export default function App() {
   const [snap, setSnap] = useState(undefined) // undefined = loading, null = no data / no connection
   const [error, setError] = useState(null)
   const [lang, setLang] = useState(initialLang)
+  const [theme, setTheme] = useState('light')
   const t = LANGS[lang]
   const graph = useMemo(() => (snap ? buildGraph(snap, t) : null), [snap, t])
   const [q, setQ] = useState('')
@@ -213,7 +220,11 @@ export default function App() {
     }
     load()
     // PPTB: reload when the user switches environment in the toolbox
-    if (inPptb()) toolboxAPI.events.on((_, p) => p?.event === 'connection:updated' && load())
+    // follow the PPTB theme (or the system one outside PPTB)
+    const applyTheme = () => currentTheme().then((th) => { document.documentElement.dataset.theme = th; setTheme(th) }, () => {})
+    applyTheme()
+    if (inPptb()) toolboxAPI.events.on((_, p) => (p?.event === 'connection:updated' ? load() : p?.event === 'settings:updated' && applyTheme()))
+    else matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme)
   }, [])
 
   useEffect(() => { document.documentElement.lang = lang }, [lang])
@@ -281,7 +292,7 @@ export default function App() {
       </aside>
       <main className="main">
         <ReactFlowProvider>
-          <Diagram graph={graph} focusId={focusId} hideTypes={hideTypes} onSelect={setSelId} t={t} />
+          <Diagram graph={graph} focusId={focusId} hideTypes={hideTypes} onSelect={setSelId} t={t} theme={theme} />
         </ReactFlowProvider>
       </main>
       {sel && (
@@ -291,7 +302,7 @@ export default function App() {
           <h2>{sel.label}</h2>
           {sel.id !== focusId && <button onClick={() => focus(sel.id)}>{t.text.centerHere}</button>}
           <dl>
-            {Object.entries(sel.data ?? {}).filter(([, v]) => v !== null && v !== '').map(([k, v]) => (
+            {Object.entries(sel.data ?? {}).filter(([, v]) => v != null && v !== '').map(([k, v]) => (
               <div key={k}><dt>{k}</dt><dd>{typeof v === 'object' ? JSON.stringify(v, null, 1) : String(v)}</dd></div>
             ))}
           </dl>
