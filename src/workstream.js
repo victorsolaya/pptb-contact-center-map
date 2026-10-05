@@ -23,10 +23,12 @@ const SETTINGS = [
   'msdyn_enableselectingfrompushbasedworkstreams', 'msdyn_notification', 'msdyn_enableautomatedmessages', 'msdyn_restrictdownloadrecording',
   'msdyn_restrictdownloadtranscript', 'msdyn_requiredispositioncodeforworkstreamconversations', 'msdyn_useglobalsettingsforrequiringdispositioncode',
   'msdyn_isconversationcounterenabled', 'msdyn_matchinglogic', 'msdyn_handlingtimethreshold', 'msdyn_waitingtimethreshold', 'msdyn_followupafterwaiting',
-  'msdyn_fallbacklanguage',
+  'msdyn_fallbacklanguage', 'msdyn_blockcapacityforwrapupinseconds', 'msdyn_screenpoptimeout',
 ]
-// Lookups copied as-is: default/outbound queue, session template and notification templates.
-const LOOKUPS = /^_(msdyn_defaultqueue|msdyn_outboundqueueid|msdyn_sessiontemplate_default|msdyn_notificationtemplate_\w+)_value$/
+// Session and notification templates are text columns holding the template's unique name.
+const TEMPLATES = /^msdyn_(sessiontemplate|notificationtemplate)_\w+$/
+// Lookups copied as-is: default and outbound queue.
+const LOOKUPS = /^_(msdyn_defaultqueue|msdyn_outboundqueueid)_value$/
 const VARIABLE_FIELDS = ['msdyn_name', 'msdyn_displayname', 'msdyn_datatype', 'msdyn_ismodifiable', 'msdyn_isdisplayable', 'msdyn_islist', 'msdyn_relationshipname', 'msdyn_entitylogicalname']
 
 // Workstreams that can serve as template: they have a routing contract (admin-center workstreams do).
@@ -56,7 +58,8 @@ export function planWorkstream(raw, templateId, { copyRules = true } = {}) {
       definition: copyRules ? route.msdyn_rulesetdefinition : `<decision hit-policy="${hitPolicy}" version="1">\n  <rules />\n</decision>`,
       rules: copyRules ? parseRules(route.msdyn_rulesetdefinition).length : 0,
     },
-    skippedSteps: steps.filter((s) => s !== routeStep).length, // e.g. classification: not copied
+    skippedSteps: steps.filter((s) => kindOf(rulesetOf(s)) === 'classification').length, // classification steps are not copied
+    unknownSteps: steps.filter((s) => s !== routeStep && kindOf(rulesetOf(s)) !== 'classification').length, // kind could not be read (e.g. contracts not readable)
   }
 }
 
@@ -67,10 +70,10 @@ export function planWorkstream(raw, templateId, { copyRules = true } = {}) {
 // which `deleteCreated` removes again (undo).
 export async function createWorkstream(name, plan) {
   const { template } = plan
-  // read everything that can fail before writing anything
+  // read the template and the lookup metadata before writing; anything that still fails later is rolled back
   const full = await dataverseAPI.retrieve('msdyn_liveworkstream', normGuid(template.msdyn_liveworkstreamid))
   const contract = await dataverseAPI.retrieve('msdyn_decisioncontract', normGuid(plan.contractId), ['msdyn_contractdefinition'])
-  const settings = Object.fromEntries(SETTINGS.filter((f) => full[f] != null).map((f) => [f, full[f]]))
+  const settings = Object.fromEntries(Object.keys(full).filter((f) => full[f] != null && (SETTINGS.includes(f) || TEMPLATES.test(f))).map((f) => [f, full[f]]))
   const lookupBinds = []
   for (const [key, id] of Object.entries(full)) {
     const m = LOOKUPS.exec(key)

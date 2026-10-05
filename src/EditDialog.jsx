@@ -398,6 +398,7 @@ export function WorkstreamDialog({ raw, org, env, busy, error, onApply, onBack, 
         {plan.route && <li>{t.edit.recRouting(plan.route.rules)}</li>}
       </ol>
       {plan.skippedSteps > 0 && <p className="muted small">{t.edit.recSkipped}</p>}
+      {plan.unknownSteps > 0 && <p className="err">{t.edit.routeUnknown}</p>}
       <p className="muted small">{t.edit.wsNotes}</p>
       <Target org={org} env={env} error={error} t={t} />
     </Modal>

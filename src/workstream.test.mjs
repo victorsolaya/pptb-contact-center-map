@@ -26,7 +26,8 @@ globalThis.dataverseAPI = {
   retrieve: async (entity) =>
     entity === 'msdyn_liveworkstream'
       ? { msdyn_streamsource: 192390001, msdyn_mode: 717210001, msdyn_workdistributionmode: 192350000, msdyn_capacityrequired: 1, msdyn_apikey: 'secret',
-          _msdyn_defaultqueue_value: 'q-fallback', _msdyn_notificationtemplate_incoming_auth_value: 'nt-1', _msdyn_bot_user_value: 'bot-1', '_msdyn_defaultqueue_value@OData.Community.Display.V1.FormattedValue': 'Fallback' }
+          msdyn_sessiontemplate_default: 'bm_whatsapp_session', msdyn_notificationtemplate_incoming_auth: 'bm_whatsapp_incoming', 'msdyn_notificationtemplate_incoming_auth@OData.Community.Display.V1.FormattedValue': 'x',
+          _msdyn_defaultqueue_value: 'q-fallback', _msdyn_bot_user_value: 'bot-1', '_msdyn_defaultqueue_value@OData.Community.Display.V1.FormattedValue': 'Fallback' }
       : { msdyn_contractdefinition: '<contract version="1"><complex key="liveworkitemcontext"><variable name="segment" data-type="string" /></complex></contract>' },
   create: async (entity, record) => {
     if (entity === failOn) throw new Error(`403 cannot create ${entity}`)
@@ -68,6 +69,11 @@ assert.equal(plan.capacity.length, 1)
 assert.equal(plan.route.ruleset.msdyn_decisionrulesetid, 'rs-route')
 assert.equal(plan.route.rules, 1)
 assert.equal(plan.skippedSteps, 1)
+assert.equal(plan.unknownSteps, 0)
+// contracts unreadable: no route step can be identified, and that is reported as unknown, not as classification
+const blind = planWorkstream({ ...raw, contracts: { error: '403' } }, 'ws-1')
+assert.equal(blind.route, undefined)
+assert.deepEqual([blind.skippedSteps, blind.unknownSteps], [0, 2])
 const empty = planWorkstream(raw, 'ws-1', { copyRules: false })
 assert.equal(empty.route.definition, '<decision hit-policy="all" version="1">\n  <rules />\n</decision>')
 
@@ -85,7 +91,9 @@ assert.equal(ws.msdyn_name, 'Sales WhatsApp')
 assert.equal(ws.msdyn_streamsource, 192390001)
 assert.equal(ws['nav_msdyn_routingcontractid@odata.bind'], '/msdyn_decisioncontract_set(msdyn_decisioncontract-1)')
 assert.equal(ws['nav_msdyn_defaultqueue@odata.bind'], '/queue_set(q-fallback)')
-assert.equal(ws['nav_msdyn_notificationtemplate_incoming_auth@odata.bind'], '/msdyn_notificationtemplate_set(nt-1)')
+assert.equal(ws.msdyn_sessiontemplate_default, 'bm_whatsapp_session', 'templates are copied as text')
+assert.equal(ws.msdyn_notificationtemplate_incoming_auth, 'bm_whatsapp_incoming')
+assert.ok(!Object.keys(ws).some((k) => k.includes('@OData.Community')), 'no annotations sent back')
 assert.ok(!('msdyn_apikey' in ws) && !Object.keys(ws).some((k) => k.includes('bot')), 'no secrets, no bot')
 assert.equal(rec('msdyn_ocliveworkstreamcontextvariable').msdyn_name, 'segment')
 assert.equal(rec('msdyn_decisionruleset').msdyn_rulesetdefinition, route)
@@ -97,6 +105,17 @@ assert.equal(workstreamId, 'msdyn_liveworkstream-2')
 writes.length = 0
 assert.deepEqual(await deleteCreated(created), [])
 assert.deepEqual(writes.map(([, e]) => e), [...created].reverse().map((c) => c.entity))
+
+// retrying an undo only deletes what is left
+const real = globalThis.dataverseAPI.delete
+let broken = 'msdyn_routingconfiguration-6'
+globalThis.dataverseAPI.delete = async (entity, id) => { if (id === broken) throw new Error('locked'); return real(entity, id) }
+let remaining = await deleteCreated(created)
+assert.deepEqual(remaining.map((r) => r.id), ['msdyn_routingconfiguration-6'])
+broken = null
+remaining = await deleteCreated(remaining)
+assert.deepEqual(remaining, [])
+globalThis.dataverseAPI.delete = real
 
 // a failure halfway deletes what was already created and says so
 writes.length = 0

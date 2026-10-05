@@ -41,7 +41,7 @@ With **Edit mode** switched on (a switch in the sidebar, off by default and only
 | Add a user to a queue | Associate `queue` ↔ `systemuser` (`queuemembership_association`), the same as *Add users* in the Contact Center admin center | Removes the user again |
 | Remove a user from a queue | Disassociate the same relationship | Adds the user again |
 | Create an omnichannel queue | Create `queue` (name, type, assignment method, priority, operating hours). Type and assignment method only offer values already used by existing omnichannel queues | Deletes the new queue |
-| Create a workstream from an existing one (same channel) | Create, in this order: a routing contract (`msdyn_decisioncontract`) with the template's context variables, the workstream (`msdyn_liveworkstream`) with the template's settings, default queue, session and notification templates, its context variables, its capacity profile links, and an active routing configuration with one queue-identification step and a route-to-queue ruleset (empty, or with the template's rules copied). The channel, bots and API keys are not copied; classification steps are not copied. If any record fails, the ones already created are deleted before the error is shown | Deletes every created record, newest first |
+| Create a workstream from an existing one (same channel) | Create, in this order: a routing contract (`msdyn_decisioncontract`) with the template's context variables, the workstream (`msdyn_liveworkstream`) with the template's settings, default queue, session and notification templates, its context variables, its capacity profile links, and and, when the template has a route-to-queue step, an active routing configuration with one queue-identification step and a route-to-queue ruleset (empty, or with the template's rules copied). The channel, bots and API keys are not copied; classification steps are not copied. If any record fails, the ones already created are deleted before the error is shown | Deletes every created record, newest first |
 | Add a rule to a **route-to-queue** or **classification** ruleset | Update `msdyn_decisionruleset.msdyn_rulesetdefinition`: the new `<rule>` is appended at the end; the rest of the definition is left untouched | Writes the previous definition back |
 | Delete a rule from those rulesets | Same update, removing that one `<rule>` | Writes the previous definition back |
 
@@ -49,7 +49,7 @@ Overflow, assignment and system rulesets are never edited. Rule conditions can o
 
 Every change:
 
-- starts only from an explicit click (**+ Add agent**, **×**, **+ New queue**, **+ Add rule**);
+- starts only from an explicit click (**+ Add agent**, **×**, **Create → Queue** or **Create → Workstream**, **+ Add rule**);
 - shows a preview naming what changes, the org and the environment type, with an extra warning for **Production** connections, and waits for confirmation;
 - can be reverted with **Undo** in the message shown right after it;
 - runs with the permissions of the ToolBox connection. It needs Append and Append To on *Queue* and *User* (agents), Create and Delete on *Queue* (queues), Write on *Decision rule set* (rules), and Create and Delete on *Workstream*, *Decision contract*, *Decision rule set*, *Routing configuration*, *Routing configuration step*, *Context variable* and *Workstream capacity profile* (workstreams); the Omnichannel administrator role, for example, covers them. If any is missing, the Dataverse error is shown and nothing changes.

@@ -354,10 +354,12 @@ export default function App() {
       const { workstreamId, created } = await createWorkstream(name, plan)
       await refreshTables(WORKSTREAM_TABLES)
       focus(`workstream:${normGuid(workstreamId)}`)
+      // a retried undo only deletes what an earlier attempt could not
+      let remaining = created
       return async () => {
-        const leftovers = await deleteCreated(created)
+        remaining = await deleteCreated(remaining)
         await refreshTables(WORKSTREAM_TABLES)
-        if (leftovers.length) throw Object.assign(new Error(t.edit.failed), { code: 'partial', leftovers })
+        if (remaining.length) throw Object.assign(new Error(t.edit.failed), { code: 'partial', leftovers: remaining })
       }
     }, t.edit.wsCreated(name))
   const openDialog = (d) => { setEditError(null); setDialog(d) }
