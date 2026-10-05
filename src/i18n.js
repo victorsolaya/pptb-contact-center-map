@@ -28,6 +28,7 @@ const en = {
     noData: 'No data. Open this tool from Power Platform ToolBox with a connected environment.', language: 'Language', refresh: 'Refresh',
   },
   edit: {
+    reverted: 'The changes already made were reverted.', notReverted: (list) => `These changes could not be reverted. Check them in the admin center: ${list}`,
     editDetails: 'Edit', review: 'Review changes', save: 'Save', detailsTitle: (n) => `Save changes to "${n}"`, confirmDetails: 'These changes will be saved:', saved: (n) => `"${n}" updated`,
     capacity: 'Capacity', byUnits: 'Unit based', byProfile: 'Profile based', unitsRequired: 'Units required', newProfile: '+ New capacity profile', newProfileName: 'New profile name',
     linkProfile: (p) => `Link the capacity profile "${p}"`, unlinkProfile: (p) => `Unlink the capacity profile "${p}"`, createProfile: (p, n) => `Create the capacity profile "${p}" (up to ${n} at a time) and link it`,
@@ -97,6 +98,7 @@ const es = {
     noData: 'Sin datos. Abre esta herramienta desde Power Platform ToolBox con un entorno conectado.', language: 'Idioma', refresh: 'Actualizar',
   },
   edit: {
+    reverted: 'Los cambios que ya se habían hecho se han revertido.', notReverted: (list) => `No se han podido revertir estos cambios. Revísalos en el admin center: ${list}`,
     editDetails: 'Editar', review: 'Revisar cambios', save: 'Guardar', detailsTitle: (n) => `Guardar cambios en «${n}»`, confirmDetails: 'Se guardarán estos cambios:', saved: (n) => `«${n}» actualizado`,
     capacity: 'Capacidad', byUnits: 'Por unidades', byProfile: 'Por perfil de capacidad', unitsRequired: 'Unidades necesarias', newProfile: '+ Nuevo perfil de capacidad', newProfileName: 'Nombre del nuevo perfil',
     linkProfile: (p) => `Vincular el perfil de capacidad «${p}»`, unlinkProfile: (p) => `Desvincular el perfil de capacidad «${p}»`, createProfile: (p, n) => `Crear el perfil de capacidad «${p}» (hasta ${n} a la vez) y vincularlo`,
@@ -166,6 +168,7 @@ const pt = {
     noData: 'Sem dados. Abra esta ferramenta no Power Platform ToolBox com um ambiente conectado.', language: 'Idioma', refresh: 'Atualizar',
   },
   edit: {
+    reverted: 'As alterações já feitas foram revertidas.', notReverted: (list) => `Não foi possível reverter estas alterações. Verifique-as no admin center: ${list}`,
     editDetails: 'Editar', review: 'Revisar alterações', save: 'Salvar', detailsTitle: (n) => `Salvar alterações em "${n}"`, confirmDetails: 'Estas alterações serão salvas:', saved: (n) => `"${n}" atualizado`,
     capacity: 'Capacidade', byUnits: 'Por unidades', byProfile: 'Por perfil de capacidade', unitsRequired: 'Unidades necessárias', newProfile: '+ Novo perfil de capacidade', newProfileName: 'Nome do novo perfil',
     linkProfile: (p) => `Vincular o perfil de capacidade "${p}"`, unlinkProfile: (p) => `Desvincular o perfil de capacidade "${p}"`, createProfile: (p, n) => `Criar o perfil de capacidade "${p}" (até ${n} por vez) e vinculá-lo`,
@@ -235,6 +238,7 @@ const fr = {
     noData: 'Aucune donnée. Ouvrez cet outil depuis Power Platform ToolBox avec un environnement connecté.', language: 'Langue', refresh: 'Actualiser',
   },
   edit: {
+    reverted: 'Les modifications déjà faites ont été annulées.', notReverted: (list) => `Ces modifications n’ont pas pu être annulées. Vérifiez-les dans le centre d’administration : ${list}`,
     editDetails: 'Modifier', review: 'Vérifier les modifications', save: 'Enregistrer', detailsTitle: (n) => `Enregistrer les modifications de « ${n} »`, confirmDetails: 'Ces modifications seront enregistrées :', saved: (n) => `« ${n} » mis à jour`,
     capacity: 'Capacité', byUnits: 'Par unités', byProfile: 'Par profil de capacité', unitsRequired: 'Unités nécessaires', newProfile: '+ Nouveau profil de capacité', newProfileName: 'Nom du nouveau profil',
     linkProfile: (p) => `Associer le profil de capacité « ${p} »`, unlinkProfile: (p) => `Dissocier le profil de capacité « ${p} »`, createProfile: (p, n) => `Créer le profil de capacité « ${p} » (jusqu’à ${n} à la fois) et l’associer`,
@@ -304,11 +308,12 @@ const de = {
     noData: 'Keine Daten. Öffne dieses Tool aus Power Platform ToolBox mit einer verbundenen Umgebung.', language: 'Sprache', refresh: 'Aktualisieren',
   },
   edit: {
+    reverted: 'Die bereits vorgenommenen Änderungen wurden zurückgenommen.', notReverted: (list) => `Diese Änderungen konnten nicht zurückgenommen werden. Prüfe sie im Admin Center: ${list}`,
     editDetails: 'Bearbeiten', review: 'Änderungen prüfen', save: 'Speichern', detailsTitle: (n) => `Änderungen an „${n}“ speichern`, confirmDetails: 'Diese Änderungen werden gespeichert:', saved: (n) => `„${n}“ aktualisiert`,
     capacity: 'Kapazität', byUnits: 'Einheitenbasiert', byProfile: 'Profilbasiert', unitsRequired: 'Benötigte Einheiten', newProfile: '+ Neues Kapazitätsprofil', newProfileName: 'Name des neuen Profils',
     linkProfile: (p) => `Kapazitätsprofil „${p}“ verknüpfen`, unlinkProfile: (p) => `Verknüpfung mit Kapazitätsprofil „${p}“ entfernen`, createProfile: (p, n) => `Kapazitätsprofil „${p}“ (bis zu ${n} gleichzeitig) erstellen und verknüpfen`,
-    needProfile: 'Wählen Sie mindestens ein Kapazitätsprofil.', profileScope: (n) => (n === 0 ? 'Noch kein Arbeitsstream verwendet dieses Profil.' : n === 1 ? 'Die Änderung betrifft den Arbeitsstream, der es verwendet.' : `Die Änderung betrifft die ${n} Arbeitsstreams, die es verwenden.`),
-    yes: 'Ja', no: 'Nein', staleRecord: 'Dieser Datensatz wurde seit dem Laden der Karte geändert. Aktualisieren Sie die Karte und versuchen Sie es erneut.',
+    needProfile: 'Wähle mindestens ein Kapazitätsprofil.', profileScope: (n) => (n === 0 ? 'Noch kein Arbeitsstream verwendet dieses Profil.' : n === 1 ? 'Die Änderung betrifft den Arbeitsstream, der es verwendet.' : `Die Änderung betrifft die ${n} Arbeitsstreams, die es verwenden.`),
+    yes: 'Ja', no: 'Nein', staleRecord: 'Dieser Datensatz wurde seit dem Laden der Karte geändert. Aktualisiere die Karte und versuche es erneut.',
     fixedNote: 'Kanal, Arbeitsverteilungsmodus und Richtung lassen sich nach dem Erstellen des Arbeitsstreams nicht mehr ändern.',
     routeUnknown: 'Die Weiterleitung der Vorlage konnte nicht gelesen werden (diese Verbindung kann die Weiterleitungsverträge eventuell nicht lesen). Der Arbeitsstream wird ohne Weiterleitung erstellt.',
     createTitle: 'Erstellen',
@@ -373,6 +378,7 @@ const it = {
     noData: 'Nessun dato. Apri questo strumento da Power Platform ToolBox con un ambiente connesso.', language: 'Lingua', refresh: 'Aggiorna',
   },
   edit: {
+    reverted: 'Le modifiche già fatte sono state annullate.', notReverted: (list) => `Non è stato possibile annullare queste modifiche. Controllale nell’admin center: ${list}`,
     editDetails: 'Modifica', review: 'Rivedi le modifiche', save: 'Salva', detailsTitle: (n) => `Salva le modifiche a "${n}"`, confirmDetails: 'Verranno salvate queste modifiche:', saved: (n) => `"${n}" aggiornato`,
     capacity: 'Capacità', byUnits: 'Basata su unità', byProfile: 'Basata su profilo', unitsRequired: 'Unità necessarie', newProfile: '+ Nuovo profilo di capacità', newProfileName: 'Nome del nuovo profilo',
     linkProfile: (p) => `Collega il profilo di capacità "${p}"`, unlinkProfile: (p) => `Scollega il profilo di capacità "${p}"`, createProfile: (p, n) => `Crea il profilo di capacità "${p}" (fino a ${n} alla volta) e collegalo`,

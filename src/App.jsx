@@ -282,6 +282,7 @@ export default function App() {
   const focus = (id) => { setFocusId(id); setSelId(id) }
   // re-read everything from the same connection, keeping what is selected and where the map is
   const refresh = () => {
+    setEditingId(null) // the form's values would be older than the refreshed map
     setRefreshing(true)
     loadSnapshot().then(setSnap, (e) => setError(e.message)).finally(() => setRefreshing(false))
   }
@@ -297,7 +298,9 @@ export default function App() {
     const message = String(e?.message ?? e)
     // multi-record creates clean up after themselves; say whether that worked
     if (e?.code === 'rolledBack') return `${message}. ${t.edit.rolledBack}`
-    if (e?.code === 'partial') return `${message}. ${t.edit.partial(e.leftovers.map((r) => r.label ?? `${r.entity} ${r.id}`).join(', '))}`
+    if (e?.code === 'reverted') return `${message}. ${t.edit.reverted}`
+    if (e?.code === 'notReverted') return `${message}. ${t.edit.notReverted(e.leftovers.map((r) => r.label).join(', '))}`
+    if (e?.code === 'partial') return `${message}. ${t.edit.partial(e.leftovers.map((r) => `${r.entity} ${r.id}`).join(', '))}`
     return message
   }
   // `change` applies one change and returns the function that reverts it (offered as Undo).
@@ -374,7 +377,7 @@ export default function App() {
       return async () => {
         remaining = await undoAll(remaining)
         await refreshTables(DETAIL_TABLES[node.type])
-        if (remaining.length) throw Object.assign(new Error(t.edit.failed), { code: 'partial', leftovers: remaining })
+        if (remaining.length) throw Object.assign(new Error(t.edit.failed), { code: 'notReverted', leftovers: remaining })
       }
     }, t.edit.saved(plan.changes.find((c) => /^(msdyn_)?name$/.test(c.col))?.to ?? node.label))
   const openDialog = (d) => { setEditError(null); setDialog(d) }
@@ -475,7 +478,7 @@ export default function App() {
             {sel.id !== focusId && <button onClick={() => focus(sel.id)}>{t.text.centerHere}</button>}
             {edit && editingId !== sel.id && recordOf(snap.raw, sel) && <button className="primary" onClick={() => setEditingId(sel.id)}>✎ {t.edit.editDetails}</button>}
           </div>
-          {edit && editingId === sel.id ? (
+          {edit && editingId === sel.id && recordOf(snap.raw, sel) ? (
             <DetailsForm key={sel.id} node={sel} raw={snap.raw} queues={queueOptions} t={t} onCancel={() => setEditingId(null)}
               onReview={(plan) => openDialog({ kind: 'details', node: sel, plan })} />
           ) : (

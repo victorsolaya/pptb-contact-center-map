@@ -441,7 +441,7 @@ export function DetailsForm({ node, raw, queues, t, onReview, onCancel }) {
   const setNp = (patch) => set({ newProfile: { ...np, ...patch } })
   const noProfile = node.type === 'workstream' && byProfile && !form.profiles.length && !np
   const valid = clean[nameCol] && !noProfile && (
-    node.type === 'workstream' ? (byProfile || whole(form.msdyn_capacityrequired, 0)) && (!np || (np.name.trim() && whole(np.units, 1)))
+    node.type === 'workstream' ? (byProfile ? !np || (np.name.trim() && whole(np.units, 1)) : whole(form.msdyn_capacityrequired, 0))
     : node.type === 'queue' ? whole(form.msdyn_priority, 0)
     : whole(form.msdyn_defaultmaxunits, 1))
   const number = (col, min) => <input type="number" min={min} value={form[col] ?? ''} onChange={(e) => set({ [col]: num(e.target.value) })} />

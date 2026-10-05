@@ -44,7 +44,7 @@ const raw = {
   workstreams: [ws],
   queues: [{ queueid: 'q-1', name: 'Sales', msdyn_priority: 10, _msdyn_operatinghourid_value: null }],
   capacityProfiles: [{ msdyn_capacityprofileid: 'cap-1', msdyn_name: 'Voice', msdyn_defaultmaxunits: 1, msdyn_blockassignment: true }, { msdyn_capacityprofileid: 'cap-2', msdyn_name: 'Chat' }],
-  workstreamCapacity: [{ msdyn_liveworkstreamcapacityprofileid: 'link-1', _msdyn_workstream_id_value: 'ws-1', _msdyn_capacityprofile_id_value: 'cap-1' }],
+  workstreamCapacity: [{ msdyn_liveworkstreamcapacityprofileid: 'link-1', msdyn_name: 'Chat voice link', _msdyn_workstream_id_value: 'ws-1', _msdyn_capacityprofile_id_value: 'cap-1' }],
 }
 const wsNode = { id: 'workstream:ws-1', type: 'workstream' }
 const reset = () => { writes.length = 0; Object.assign(live, { msdyn_liveworkstream: { ...ws }, queue: { ...raw.queues[0] } }) }
@@ -95,6 +95,10 @@ assert.deepEqual(writes.map(([op, e]) => `${op} ${e}`), [
   'create msdyn_liveworkstreamcapacityprofile', 'update msdyn_liveworkstream',
 ])
 assert.equal(writes[3][2]['nav_msdyn_capacityprofile_id@odata.bind'], '/msdyn_capacityprofile_set(cap-1)', 'the removed link comes back')
+assert.equal(writes[3][2].msdyn_name, 'Chat voice link', 'with its original name')
+
+// the record is gone (deleted elsewhere): nothing to plan, no crash
+assert.equal(planDetails({ ...raw, workstreams: [] }, wsNode, initialForm(raw, wsNode)).steps.length, 0)
 
 // profiles are left alone while unit based
 assert.equal(planDetails(raw, wsNode, { ...initialForm(raw, wsNode), profiles: [] }).steps.length, 0)
@@ -102,7 +106,7 @@ assert.equal(planDetails(raw, wsNode, { ...initialForm(raw, wsNode), profiles: [
 // a failure halfway reverts what was done and says so; a retried undo only redoes what failed
 reset()
 failOn = 'msdyn_liveworkstreamcapacityprofile'
-await assert.rejects(runSteps(plan.steps), (e) => e.code === 'rolledBack' && e.leftovers.length === 0)
+await assert.rejects(runSteps(plan.steps), (e) => e.code === 'reverted' && e.leftovers.length === 0)
 assert.deepEqual(writes.slice(-3).map(([op, e]) => `${op} ${e}`), ['delete msdyn_capacityprofile', 'create msdyn_liveworkstreamcapacityprofile', 'update msdyn_liveworkstream'])
 const flaky = Object.assign(async () => { if (flaky.broken) throw new Error('locked') }, { label: 'x 1', broken: true })
 const ok = async () => {}

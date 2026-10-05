@@ -48,6 +48,7 @@ export function initialForm(raw, node) {
 export function planDetails(raw, node, form) {
   const spec = SPECS[node.type]
   const row = recordOf(raw, node)
+  if (!row) return { changes: [], link: [], unlink: [], newProfile: null, steps: [] }
   const id = normGuid(row[spec.id])
   const changed = columns(spec).filter((c) => differ(value(row, c), form[c]))
   const before = Object.fromEntries(changed.map((c) => [c, value(row, c)]))
@@ -101,7 +102,7 @@ const linkStep = (workstreamId, profileId, name) => async () => {
 }
 const unlinkStep = (workstreamId, link, name) => async () => {
   await dataverseAPI.delete(LINK, link.msdyn_liveworkstreamcapacityprofileid)
-  return undoable(`${LINK} ${normGuid(link._msdyn_capacityprofile_id_value)}`, () => linkStep(workstreamId, link._msdyn_capacityprofile_id_value, name)())
+  return undoable(`${LINK} ${normGuid(link._msdyn_capacityprofile_id_value)}`, () => linkStep(workstreamId, link._msdyn_capacityprofile_id_value, link.msdyn_name ?? name)())
 }
 // Same shape the admin center writes: unique name "new_<id>", reset immediately.
 const createProfileStep = ({ id, name, units, block }) => async () => {
@@ -121,7 +122,7 @@ export async function runSteps(steps) {
   } catch (e) {
     if (!undos.length) throw e
     const leftovers = await undoAll(undos)
-    throw Object.assign(e, { code: leftovers.length ? 'partial' : 'rolledBack', leftovers })
+    throw Object.assign(e, { code: leftovers.length ? 'notReverted' : 'reverted', leftovers })
   }
   return undos
 }
