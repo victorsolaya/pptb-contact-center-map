@@ -99,3 +99,5 @@ button:hover { background: var(--hover); }
 .warn div { word-break: break-word; margin-top: 4px; }
 .side .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .side .head select { font: inherit; font-size: 12px; padding: 2px 4px; border: 1px solid var(--border-2); border-radius: 6px; background: var(--panel); color: var(--text); }
+.side .head h1 { flex: 1; }
+.refresh { padding: 0 8px; font-size: 15px; line-height: 22px; }

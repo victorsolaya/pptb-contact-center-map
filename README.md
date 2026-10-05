@@ -20,7 +20,7 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 ## Usage
 
 1. Connect to an environment in Power Platform ToolBox (interactive login or client ID and secret; the connection is managed by ToolBox).
-2. Open **Contact Center Map**. It reads the configuration of the active connection and reloads automatically when you switch connection.
+2. Open **Contact Center Map**. It reads the configuration of the active connection and reloads automatically when you switch connection. Use **↻** (next to the language) to re-read it after changing something in the admin center; the selected item and the map position are kept.
 3. Choose an item from the list on the left.
 
 ## Permissions

@@ -22,7 +22,7 @@ const en = {
     nodes: 'nodes', links: 'links', collapseAll: 'Collapse all', expandAll: 'Expand all', exportPng: 'Export PNG', copyMermaid: 'Copy Mermaid',
     centerHere: 'Center diagram here', minimize: (x) => `Minimize ${x}`, expand: (x) => `Expand ${x}`, allBoxes: 'all boxes', diagram: 'diagram',
     noConnection: 'Pick or create a connection in Power Platform ToolBox and the tool will load automatically.',
-    noData: 'No data. Open this tool from Power Platform ToolBox with a connected environment.', language: 'Language',
+    noData: 'No data. Open this tool from Power Platform ToolBox with a connected environment.', language: 'Language', refresh: 'Refresh',
   },
 }
 
@@ -47,7 +47,7 @@ const es = {
     nodes: 'nodos', links: 'relaciones', collapseAll: 'Plegar todo', expandAll: 'Desplegar todo', exportPng: 'Exportar PNG', copyMermaid: 'Copiar Mermaid',
     centerHere: 'Centrar diagrama aquí', minimize: (x) => `Minimizar ${x}`, expand: (x) => `Expandir ${x}`, allBoxes: 'todas las cajas', diagram: 'diagrama',
     noConnection: 'Elige o crea una conexión en Power Platform ToolBox y la herramienta se cargará sola.',
-    noData: 'Sin datos. Abre esta herramienta desde Power Platform ToolBox con un entorno conectado.', language: 'Idioma',
+    noData: 'Sin datos. Abre esta herramienta desde Power Platform ToolBox con un entorno conectado.', language: 'Idioma', refresh: 'Refrescar',
   },
 }
 
@@ -72,7 +72,7 @@ const pt = {
     nodes: 'nós', links: 'relações', collapseAll: 'Recolher tudo', expandAll: 'Expandir tudo', exportPng: 'Exportar PNG', copyMermaid: 'Copiar Mermaid',
     centerHere: 'Centralizar diagrama aqui', minimize: (x) => `Minimizar ${x}`, expand: (x) => `Expandir ${x}`, allBoxes: 'todas as caixas', diagram: 'diagrama',
     noConnection: 'Escolha ou crie uma conexão no Power Platform ToolBox e a ferramenta será carregada automaticamente.',
-    noData: 'Sem dados. Abra esta ferramenta no Power Platform ToolBox com um ambiente conectado.', language: 'Idioma',
+    noData: 'Sem dados. Abra esta ferramenta no Power Platform ToolBox com um ambiente conectado.', language: 'Idioma', refresh: 'Atualizar',
   },
 }
 
@@ -97,7 +97,7 @@ const fr = {
     nodes: 'nœuds', links: 'liens', collapseAll: 'Tout réduire', expandAll: 'Tout développer', exportPng: 'Exporter PNG', copyMermaid: 'Copier Mermaid',
     centerHere: 'Centrer le diagramme ici', minimize: (x) => `Réduire ${x}`, expand: (x) => `Développer ${x}`, allBoxes: 'toutes les boîtes', diagram: 'diagramme',
     noConnection: 'Choisissez ou créez une connexion dans Power Platform ToolBox et l’outil se chargera automatiquement.',
-    noData: 'Aucune donnée. Ouvrez cet outil depuis Power Platform ToolBox avec un environnement connecté.', language: 'Langue',
+    noData: 'Aucune donnée. Ouvrez cet outil depuis Power Platform ToolBox avec un environnement connecté.', language: 'Langue', refresh: 'Actualiser',
   },
 }
 
@@ -122,7 +122,7 @@ const de = {
     nodes: 'Knoten', links: 'Verbindungen', collapseAll: 'Alle einklappen', expandAll: 'Alle ausklappen', exportPng: 'PNG exportieren', copyMermaid: 'Mermaid kopieren',
     centerHere: 'Diagramm hier zentrieren', minimize: (x) => `${x} minimieren`, expand: (x) => `${x} erweitern`, allBoxes: 'alle Boxen', diagram: 'Diagramm',
     noConnection: 'Wähle oder erstelle eine Verbindung in Power Platform ToolBox, dann lädt das Tool automatisch.',
-    noData: 'Keine Daten. Öffne dieses Tool aus Power Platform ToolBox mit einer verbundenen Umgebung.', language: 'Sprache',
+    noData: 'Keine Daten. Öffne dieses Tool aus Power Platform ToolBox mit einer verbundenen Umgebung.', language: 'Sprache', refresh: 'Aktualisieren',
   },
 }
 
@@ -147,7 +147,7 @@ const it = {
     nodes: 'nodi', links: 'relazioni', collapseAll: 'Comprimi tutto', expandAll: 'Espandi tutto', exportPng: 'Esporta PNG', copyMermaid: 'Copia Mermaid',
     centerHere: 'Centra il diagramma qui', minimize: (x) => `Riduci ${x}`, expand: (x) => `Espandi ${x}`, allBoxes: 'tutte le caselle', diagram: 'diagramma',
     noConnection: 'Scegli o crea una connessione in Power Platform ToolBox e lo strumento si caricherà automaticamente.',
-    noData: 'Nessun dato. Apri questo strumento da Power Platform ToolBox con un ambiente connesso.', language: 'Lingua',
+    noData: 'Nessun dato. Apri questo strumento da Power Platform ToolBox con un ambiente connesso.', language: 'Lingua', refresh: 'Aggiorna',
   },
 }
 
