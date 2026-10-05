@@ -58,7 +58,7 @@ button:hover { background: var(--hover); }
 .list li { padding: 5px 4px; cursor: pointer; border-radius: 4px; }
 .list li:hover { background: var(--hover); }
 .list li.on { background: var(--selected); }
-.list li small { display: block; color: var(--muted); margin-left: 14px; }
+.list li small { white-space: pre-line; display: block; color: var(--muted); margin-left: 14px; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; flex: none; }
 
 .main { flex: 1; position: relative; overflow: hidden; }
@@ -68,7 +68,7 @@ button:hover { background: var(--hover); }
 .ccnode { box-sizing: border-box; width: 100%; min-height: 100%; background: var(--panel); color: var(--text); border: 2px solid; border-radius: 8px; padding: 5px 8px 7px; }
 .ccnode.focus { box-shadow: 0 0 0 4px var(--focus); }
 .ccnode .lbl { font-weight: 600; line-height: 1.3; word-break: break-word; }
-.ccnode .sub { font-size: 11px; color: var(--muted); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+.ccnode .sub { white-space: pre-line; font-size: 11px; color: var(--muted); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
 .measure { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
 .measure > div { width: 260px; }
 

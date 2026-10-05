@@ -1,4 +1,4 @@
-// Raw Web API rows (see public/background.js QUERIES) -> { meta, nodes, edges }.
+// Turns the raw Web API rows (one entry per QUERIES key in queries.js) into { meta, nodes, edges }.
 import { parseRules, normGuid, simplify } from './rules.js'
 import { rulesetKind } from './edit.js'
 import { LANGS } from './i18n.js'
@@ -34,7 +34,7 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
 
   // --- nodes
   for (const q of rows(raw, 'queues'))
-    node('queue', q.queueid, q.name, `${fv(q, 'msdyn_queuetype')} · ${fv(q, 'msdyn_assignmentstrategy')}`, {
+    node('queue', q.queueid, q.name, t.text.queueSub(fv(q, 'msdyn_queuetype'), fv(q, 'msdyn_assignmentstrategy')), {
       [F.type]: fv(q, 'msdyn_queuetype'),
       [F.assignmentMethod]: fv(q, 'msdyn_assignmentstrategy'),
       [F.priority]: q.msdyn_priority,
@@ -44,7 +44,7 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
   for (const u of rows(raw, 'users'))
     node('user', u.systemuserid, u.fullname, u.internalemailaddress, { [F.email]: u.internalemailaddress, [F.status]: fv(u, 'isdisabled') })
   for (const h of rows(raw, 'operatingHours')) node('hours', h.msdyn_operatinghourid, h.msdyn_name)
-  // overflowactiondata holds the target: a queue GUID ("Transferir a una cola") or a phone number
+  // overflowactiondata holds the target: a queue GUID ("Transfer to a queue") or a phone number
   const queueName = (guid) => nodes.get(key('queue', guid))?.label
   for (const o of rows(raw, 'overflowActions')) {
     const target = queueName(o.msdyn_overflowactiondata) ?? o.msdyn_overflowactiondata
@@ -53,7 +53,7 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
   for (const c of rows(raw, 'capacityProfiles'))
     node('capacity', c.msdyn_capacityprofileid, c.msdyn_name, t.text.max(c.msdyn_defaultmaxunits), { [F.maxUnits]: c.msdyn_defaultmaxunits, [F.blockAssignment]: fv(c, 'msdyn_blockassignment') })
   for (const w of rows(raw, 'workstreams'))
-    node('workstream', w.msdyn_liveworkstreamid, w.msdyn_name, `${fv(w, 'msdyn_streamsource')} · ${fv(w, 'msdyn_workdistributionmode')}${w.statecode ? ` · ${t.text.inactive}` : ''}`, {
+    node('workstream', w.msdyn_liveworkstreamid, w.msdyn_name, t.text.wsSub(fv(w, 'msdyn_streamsource'), fv(w, 'msdyn_workdistributionmode'), Boolean(w.statecode)), {
       [F.channel]: fv(w, 'msdyn_streamsource'),
       [F.distribution]: fv(w, 'msdyn_workdistributionmode'),
       [F.mode]: fv(w, 'msdyn_mode'),
@@ -65,7 +65,7 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
     })
   for (const [k, table, nameCol] of CHANNELS)
     for (const c of rows(raw, k))
-      node('channel', c[table + 'id'], c[nameCol], [t.channels[k], fv(c, '_msdyn_phonenumberid_value') ?? c.msdyn_organizationphonenumber].filter(Boolean).join(' · '), {
+      node('channel', c[table + 'id'], c[nameCol], [t.channels[k], fv(c, '_msdyn_phonenumberid_value') ?? c.msdyn_organizationphonenumber].filter(Boolean).join('\n'), {
         [F.channel]: t.channels[k],
         [F.phone]: fv(c, '_msdyn_phonenumberid_value') ?? c.msdyn_organizationphonenumber,
         [F.workstream]: fv(c, '_msdyn_liveworkstreamid_value'),
@@ -76,7 +76,8 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
   const contractName = new Map(rows(raw, 'contracts').map((c) => [normGuid(c.msdyn_decisioncontractid), c.msdyn_uniquename]))
   const ruleTargets = []
   for (const rs of rows(raw, 'rulesets')) {
-    const rsId = node('ruleset', rs.msdyn_decisionrulesetid, rs.msdyn_name, `${fv(rs, 'msdyn_rulesettype')} · ${fv(rs, 'msdyn_authoringmode')}`, {
+    const kind = rulesetKind(contractName.get(normGuid(rs._msdyn_outputcontractid_value)), contractName.get(normGuid(rs._msdyn_inputcontractid_value)))
+    const rsId = node('ruleset', rs.msdyn_decisionrulesetid, rs.msdyn_name, t.text.kinds[kind] ?? fv(rs, 'msdyn_rulesettype'), {
       [F.uniqueName]: rs.msdyn_uniquename,
       [F.type]: fv(rs, 'msdyn_rulesettype'),
       [F.authoring]: fv(rs, 'msdyn_authoringmode'),
@@ -84,7 +85,7 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
     })
     // what the edit mode needs: which kind of ruleset (route / classification / not editable), its XML and contracts
     Object.assign(nodes.get(rsId), {
-      kind: rulesetKind(contractName.get(normGuid(rs._msdyn_outputcontractid_value)), contractName.get(normGuid(rs._msdyn_inputcontractid_value))),
+      kind,
       guid: normGuid(rs.msdyn_decisionrulesetid),
       xml: rs.msdyn_rulesetdefinition ?? '',
       inputContract: normGuid(rs._msdyn_inputcontractid_value),

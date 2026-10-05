@@ -1,17 +1,17 @@
 # Contact Center Map
 
-A [Power Platform ToolBox](https://www.powerplatformtoolbox.com/) tool that draws the configuration of **Dynamics 365 Contact Center** (Omnichannel / unified routing) so you can understand and document it at a glance.
+A [Power Platform ToolBox](https://www.powerplatformtoolbox.com/) tool that draws the configuration of **Dynamics 365 Contact Center** (Omnichannel and unified routing) so you can understand and document it at a glance.
 
 Pick a workstream, queue, rule or user and the tool draws everything that flows into and out of it:
 
-**channel → workstream → routing rulesets → rules → queues**, with each queue showing its **operating hours**, **PreQueue / InQueue overflow** and **agents** inside its own card.
+**channel → workstream → routing rulesets → rules → queues**, with each queue showing its **operating hours**, **PreQueue and InQueue overflow** and **agents** inside its own card.
 
 ## Features
 
 - Channels (voice with phone number, WhatsApp, chat, Teams, Facebook, SMS, custom messaging), bots and capacity profiles linked to each workstream.
 - Routing rules shown as readable conditions (for example `If outside operating hours → Transfer to phone: +1 555 0100`), with the target queue resolved by name.
 - Overflow actions resolved to their target queue or phone number. "Transfer to queue" overflows are also drawn as an arrow.
-- Every box inside a queue card (operating hours, PreQueue, InQueue, agents) can be minimized with its **−/+** button, or all at once from the toolbar.
+- Every section inside a queue card (operating hours, PreQueue, InQueue, agents) can be minimized with its **−/+** button, or all at once from the toolbar.
 - One click on a card highlights its incoming path and everything below it; click the background to clear.
 - **Export PNG** for documents and **Copy Mermaid** for wikis or Markdown.
 - Optional **Edit mode** (off by default): add or remove agents, create queues, and add or delete rules in route-to-queue and classification rulesets, with preview, confirmation and undo. See [What this tool changes](#what-this-tool-changes).
@@ -26,7 +26,7 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 
 ## Permissions
 
-The map only needs read access; Edit mode needs the privileges listed in [What this tool changes](#what-this-tool-changes). The connected user (or application user) needs read access to the Omnichannel configuration tables, such as `msdyn_liveworkstream`, `msdyn_routingconfiguration`, `msdyn_decisionruleset`, `msdyn_decisioncontract`, `msdyn_assignmentconfiguration`, `queue`, `queuemembership`, `systemuser`, `msdyn_operatinghour`, `msdyn_overflowactionconfig` and the channel tables.
+The map only needs read access. The connected user (or application user) must be able to read the Omnichannel configuration tables, such as `msdyn_liveworkstream`, `msdyn_routingconfiguration`, `msdyn_decisionruleset`, `msdyn_decisioncontract`, `msdyn_assignmentconfiguration`, `queue`, `queuemembership`, `systemuser`, `msdyn_operatinghour`, `msdyn_overflowactionconfig` and the channel tables. Edit mode needs the extra privileges listed in [What this tool changes](#what-this-tool-changes).
 
 If a table cannot be read, the map is still drawn and the sidebar lists which tables failed and why.
 
@@ -34,7 +34,7 @@ If a table cannot be read, the map is still drawn and the sidebar lists which ta
 
 By default, nothing: the map is read-only and only runs `GET` queries against the Dataverse Web API.
 
-With **Edit mode** switched on (sidebar, off by default and only inside ToolBox), the tool can make exactly these changes:
+With **Edit mode** switched on (a switch in the sidebar, off by default and only available inside ToolBox), the tool can make exactly these changes:
 
 | Change | Dataverse operation | Undo |
 |---|---|---|
@@ -51,7 +51,7 @@ Every change:
 - starts only from an explicit click (**+ Add agent**, **×**, **+ New queue**, **+ Add rule**);
 - shows a preview naming what changes, the org and the environment type, with an extra warning for **Production** connections, and waits for confirmation;
 - can be reverted with **Undo** in the message shown right after it;
-- runs with the permissions of the ToolBox connection. Needed privileges: Append / Append To on *Queue* and *User* (agents), Create / Delete on *Queue* (queues), Write on *Decision rule set* (rules); for example the Omnichannel administrator role. If they are missing, the error from Dataverse is shown and nothing changes.
+- runs with the permissions of the ToolBox connection. It needs Append and Append To on *Queue* and *User* (agents), Create and Delete on *Queue* (queues), and Write on *Decision rule set* (rules); the Omnichannel administrator role, for example, covers them. If any is missing, the Dataverse error is shown and nothing changes.
 
 No other records are created, updated or deleted. Creating workstreams and new context variables is not supported yet.
 
@@ -69,7 +69,7 @@ Credentials never reach the tool: all requests go through the ToolBox `dataverse
 ```
 npm install
 npm run build   # dist/ for ToolBox
-npm test        # parser, graph, i18n and ToolBox adapter checks
+npm test        # parser, graph, i18n, ToolBox adapter and edit checks
 ```
 
 To try it locally in the desktop app: **Settings → Show Debug Menu**, then **Debug → Load Local Tool** and select this folder.

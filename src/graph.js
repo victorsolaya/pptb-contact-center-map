@@ -116,7 +116,7 @@ export function toMermaid({ nodes, edges }, t = LANGS.en) {
   const lines = ['flowchart LR']
   for (const n of nodes) {
     const extra = SECTIONS.filter(([k]) => n[k]).map(([k]) =>
-      `<br/><b>${t.sections[k]}</b>` + n[k].map((x) => `<br/>· ${mtxt(x.targets ? `${x.sub} → ${x.targets.map((a) => [a.label, a.sub].filter(Boolean).join(' ')).join(', ')}` : x.label)}`).join(''))
+      `<br/><b>${t.sections[k]}</b>` + n[k].map((x) => `<br/>- ${mtxt(x.targets ? `${x.sub} → ${x.targets.map((a) => [a.label, a.sub].filter(Boolean).join(' ')).join(', ')}` : x.label)}`).join(''))
     lines.push(`  ${mid(n.id)}["${mtxt(t.types[n.type] ?? n.type)}: ${mtxt(n.label)}${extra.join('')}"]:::${n.type}`)
   }
   for (const e of edges) lines.push(`  ${mid(e.source)} -->${e.label ? `|"${mtxt(e.label)}"|` : ''} ${mid(e.target)}`)

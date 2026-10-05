@@ -68,7 +68,7 @@ export function EditDialog({ dialog, setDialog, apply, busy, error, org, env, t 
           {found?.map((u) => (
             <li key={u.id} className={members.has(u.id) ? 'disabled' : ''} onClick={() => !members.has(u.id) && setDialog({ kind: 'confirm', action: 'add', queue, user: u })}>
               <span className="avatar" aria-hidden>{u.label.slice(0, 1)}</span>
-              <span><b>{u.label}</b><small>{u.sub}{members.has(u.id) ? ` · ${t.edit.alreadyMember}` : ''}</small></span>
+              <span><b>{u.label}</b><small>{u.sub}{members.has(u.id) ? ` (${t.edit.alreadyMember})` : ''}</small></span>
             </li>
           ))}
         </ul>
@@ -165,7 +165,9 @@ export function QueueDialog({ raw, org, env, busy, error, onApply, onBack, onClo
       <div className="card-preview queue">
         <span className="chip">{t.types.queue}</span>
         <b>{form.name.trim()}</b>
-        <small>{label(types, form.type)} · {label(strategies, strategy)} · {t.edit.priority} {form.priority}</small>
+        <small>{t.edit.queueType}: {label(types, form.type)}</small>
+        <small>{t.edit.strategy}: {label(strategies, strategy)}</small>
+        <small>{t.edit.priority}: {form.priority}</small>
         <small>{t.edit.hours}: {hours.find((h) => h.msdyn_operatinghourid === form.hoursId)?.msdyn_name ?? t.edit.none}</small>
       </div>
       <Target org={org} env={env} error={error} t={t} />

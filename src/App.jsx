@@ -142,8 +142,7 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t, theme, edit, onAdd, o
         nodes: view.nodes.map((n) => ({ id: n.id, type: 'cc', position: pos.get(n.id), ...size.get(n.id), data: dataFor(n) })),
         edges: view.edges.map((e, i) => ({ id: 'e' + i, source: e.source, target: e.target, label: e.label })),
       })
-      // refit only when the focus changes, not when a section is folded/unfolded
-      // refit only when focus or filters change, not after a refresh or when a box is folded
+      // refit only when the focus or the filters change, so a refresh or folding a section doesn't move the view
       const fitKey = `${focusId}|${hideTypes.join()}`
       if (fitted.current !== fitKey) requestAnimationFrame(() => fitView({ padding: 0.1 }))
       fitted.current = fitKey
@@ -185,7 +184,7 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t, theme, edit, onAdd, o
   return (
     <>
       <div className="toolbar">
-        <span>{view.nodes.length} {t.text.nodes} · {view.edges.length} {t.text.links}</span>
+        <span>{t.text.counts(view.nodes.length, view.edges.length)}</span>
         {sections.length > 0 && (
           <button onClick={() => setOpen(new Map(sections.map(([id, k]) => [`${id}:${k}`, !allOpen])))}>{allOpen ? t.text.collapseAll : t.text.expandAll}</button>
         )}
@@ -228,7 +227,7 @@ export default function App() {
   const [focusId, setFocusId] = useState(null)
   const [selId, setSelId] = useState(null)
   const [edit, setEdit] = useState(false)
-  const [dialog, setDialog] = useState(null) // { kind: 'add', queue } | { kind: 'confirm', action, queue, user }
+  const [dialog, setDialog] = useState(null) // { kind: 'add' | 'confirm' | 'queue' | 'rule' | 'removeRule', ...what that dialog needs }
   const [busy, setBusy] = useState(false)
   const [editError, setEditError] = useState(null)
   const [toast, setToast] = useState(null)
@@ -247,8 +246,7 @@ export default function App() {
       loadSnapshot().then(setSnap, (e) => setError(e.message))
     }
     load()
-    // PPTB: reload when the user switches environment in the toolbox
-    // follow the PPTB theme (or the system one outside PPTB)
+    // In PPTB, reload when the user switches connection and follow the ToolBox theme; outside it, follow the system theme.
     const applyTheme = () => currentTheme().then((th) => { document.documentElement.dataset.theme = th; setTheme(th) }, () => {})
     applyTheme()
     if (inPptb()) toolboxAPI.events.on((_, p) => (p?.event === 'connection:updated' ? load() : p?.event === 'settings:updated' && applyTheme()))
@@ -296,7 +294,7 @@ export default function App() {
     setEditError(null)
     try {
       const revert = await change()
-      const msg = `${text} · ${snap.org} (${snap.environment})`
+      const msg = t.edit.inOrg(text, snap.org, snap.environment)
       notify(t.edit.mode, msg, 'success')
       setToast({ text: msg, undo: revert })
       setDialog(null)
