@@ -1,5 +1,6 @@
 // Raw Web API rows (see public/background.js QUERIES) -> { meta, nodes, edges }.
 import { parseRules, normGuid, simplify } from './rules.js'
+import { rulesetKind } from './edit.js'
 import { LANGS } from './i18n.js'
 
 const fv = (r, f) => r[`${f}@OData.Community.Display.V1.FormattedValue`] ?? r[f]
@@ -72,6 +73,7 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
 
   // Rulesets and their rules. Rule actions point at queues / overflow actions by GUID inside the XML.
   const nameOf = (type, guid) => nodes.get(key(type, guid))?.label
+  const contractName = new Map(rows(raw, 'contracts').map((c) => [normGuid(c.msdyn_decisioncontractid), c.msdyn_uniquename]))
   const ruleTargets = []
   for (const rs of rows(raw, 'rulesets')) {
     const rsId = node('ruleset', rs.msdyn_decisionrulesetid, rs.msdyn_name, `${fv(rs, 'msdyn_rulesettype')} · ${fv(rs, 'msdyn_authoringmode')}`, {
@@ -79,6 +81,14 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
       [F.type]: fv(rs, 'msdyn_rulesettype'),
       [F.authoring]: fv(rs, 'msdyn_authoringmode'),
       [F.description]: rs.msdyn_description,
+    })
+    // what the edit mode needs: which kind of ruleset (route / classification / not editable), its XML and contracts
+    Object.assign(nodes.get(rsId), {
+      kind: rulesetKind(contractName.get(normGuid(rs._msdyn_outputcontractid_value)), contractName.get(normGuid(rs._msdyn_inputcontractid_value))),
+      guid: normGuid(rs.msdyn_decisionrulesetid),
+      xml: rs.msdyn_rulesetdefinition ?? '',
+      inputContract: normGuid(rs._msdyn_inputcontractid_value),
+      outputContract: normGuid(rs._msdyn_outputcontractid_value),
     })
     parseRules(rs.msdyn_rulesetdefinition).forEach((r, i) => {
       const actions = r.set.map(({ attr, value }) =>
@@ -90,6 +100,7 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
         [F.actions]: actions.join('\n'),
         [F.orderBy]: r.orderBy.join(', '),
       })
+      Object.assign(nodes.get(ruleId), { rulesetId: rsId, ruleId: r.id })
       edge(rsId, ruleId, 'order', `#${i + 1}`)
       for (const { attr, value } of r.set) {
         if (attr === 'assign_to.queue') ruleTargets.push([ruleId, 'queue', value])

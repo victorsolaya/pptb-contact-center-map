@@ -32,6 +32,14 @@ const en = {
     target: (org, env) => `Environment: ${org} (${env})`, production: 'This is a PRODUCTION environment. The change applies immediately.',
     add: 'Add', removeBtn: 'Remove', cancel: 'Cancel', back: 'Back', undo: 'Undo', working: 'Applying…',
     added: (u, q) => `${u} added to "${q}"`, removed: (u, q) => `${u} removed from "${q}"`, failed: 'The change could not be applied',
+    newQueue: '+ New queue', queueTitle: 'New queue', name: 'Name', queueType: 'Type', strategy: 'Assignment method', priority: 'Priority', hours: 'Operating hours', none: '(none)',
+    confirmQueue: (n) => `The omnichannel queue "${n}" will be created. Add agents to it afterwards from its card.`, queueCreated: (n) => `Queue "${n}" created`, queueDeleted: (n) => `Queue "${n}" deleted`,
+    addRule: '+ Add rule', removeRule: 'Delete rule', ruleTitle: (rs) => `New rule in "${rs}"`, ruleName: 'Rule name',
+    conditions: 'Conditions (all must match)', addCondition: '+ Condition', noConditions: 'No conditions: the rule always applies.', then: 'Then', routeTo: 'Route to queue',
+    setVar: 'Set', addSet: '+ Set another variable', value: 'Value', appendNote: 'The rule is added at the end; rules are evaluated in order.',
+    confirmRule: (rs) => `This rule will be added at the end of "${rs}":`, confirmRemoveRule: (rs) => `This rule will be deleted from "${rs}":`,
+    ruleAdded: (rs) => `Rule added to "${rs}"`, ruleRemoved: (rs) => `Rule deleted from "${rs}"`, removeRuleTitle: 'Delete a rule',
+    stale: 'This ruleset was changed elsewhere after the map was loaded. Reload the tool and try again.', loadingContract: 'Reading the ruleset contract…', next: 'Next', required: 'Fill in the name and every value.',
   },
 }
 
@@ -66,6 +74,14 @@ const es = {
     target: (org, env) => `Entorno: ${org} (${env})`, production: 'Es un entorno de PRODUCCIÓN. El cambio se aplica al momento.',
     add: 'Añadir', removeBtn: 'Quitar', cancel: 'Cancelar', back: 'Atrás', undo: 'Deshacer', working: 'Aplicando…',
     added: (u, q) => `${u} añadido a «${q}»`, removed: (u, q) => `${u} quitado de «${q}»`, failed: 'No se pudo aplicar el cambio',
+    newQueue: '+ Nueva cola', queueTitle: 'Nueva cola', name: 'Nombre', queueType: 'Tipo', strategy: 'Método de asignación', priority: 'Prioridad', hours: 'Horario', none: '(ninguno)',
+    confirmQueue: (n) => `Se creará la cola omnicanal «${n}». Después podrás añadirle agentes desde su tarjeta.`, queueCreated: (n) => `Cola «${n}» creada`, queueDeleted: (n) => `Cola «${n}» eliminada`,
+    addRule: '+ Añadir regla', removeRule: 'Eliminar regla', ruleTitle: (rs) => `Nueva regla en «${rs}»`, ruleName: 'Nombre de la regla',
+    conditions: 'Condiciones (deben cumplirse todas)', addCondition: '+ Condición', noConditions: 'Sin condiciones: la regla se aplica siempre.', then: 'Entonces', routeTo: 'Enrutar a la cola',
+    setVar: 'Establecer', addSet: '+ Establecer otra variable', value: 'Valor', appendNote: 'La regla se añade al final; las reglas se evalúan en orden.',
+    confirmRule: (rs) => `Se añadirá esta regla al final de «${rs}»:`, confirmRemoveRule: (rs) => `Se eliminará esta regla de «${rs}»:`,
+    ruleAdded: (rs) => `Regla añadida a «${rs}»`, ruleRemoved: (rs) => `Regla eliminada de «${rs}»`, removeRuleTitle: 'Eliminar una regla',
+    stale: 'Este conjunto de reglas se ha modificado en otro sitio después de cargar el mapa. Recarga la herramienta y vuelve a intentarlo.', loadingContract: 'Leyendo el contrato del conjunto de reglas…', next: 'Siguiente', required: 'Rellena el nombre y todos los valores.',
   },
 }
 
@@ -100,6 +116,14 @@ const pt = {
     target: (org, env) => `Ambiente: ${org} (${env})`, production: 'Este é um ambiente de PRODUÇÃO. A alteração é aplicada imediatamente.',
     add: 'Adicionar', removeBtn: 'Remover', cancel: 'Cancelar', back: 'Voltar', undo: 'Desfazer', working: 'Aplicando…',
     added: (u, q) => `${u} adicionado a "${q}"`, removed: (u, q) => `${u} removido de "${q}"`, failed: 'Não foi possível aplicar a alteração',
+    newQueue: '+ Nova fila', queueTitle: 'Nova fila', name: 'Nome', queueType: 'Tipo', strategy: 'Método de atribuição', priority: 'Prioridade', hours: 'Horário', none: '(nenhum)',
+    confirmQueue: (n) => `A fila omnichannel "${n}" será criada. Depois adicione agentes a partir do seu cartão.`, queueCreated: (n) => `Fila "${n}" criada`, queueDeleted: (n) => `Fila "${n}" excluída`,
+    addRule: '+ Adicionar regra', removeRule: 'Excluir regra', ruleTitle: (rs) => `Nova regra em "${rs}"`, ruleName: 'Nome da regra',
+    conditions: 'Condições (todas devem ser atendidas)', addCondition: '+ Condição', noConditions: 'Sem condições: a regra sempre se aplica.', then: 'Então', routeTo: 'Rotear para a fila',
+    setVar: 'Definir', addSet: '+ Definir outra variável', value: 'Valor', appendNote: 'A regra é adicionada no final; as regras são avaliadas em ordem.',
+    confirmRule: (rs) => `Esta regra será adicionada no final de "${rs}":`, confirmRemoveRule: (rs) => `Esta regra será excluída de "${rs}":`,
+    ruleAdded: (rs) => `Regra adicionada a "${rs}"`, ruleRemoved: (rs) => `Regra excluída de "${rs}"`, removeRuleTitle: 'Excluir uma regra',
+    stale: 'Este conjunto de regras foi alterado em outro lugar depois que o mapa foi carregado. Recarregue a ferramenta e tente novamente.', loadingContract: 'Lendo o contrato do conjunto de regras…', next: 'Avançar', required: 'Preencha o nome e todos os valores.',
   },
 }
 
@@ -134,6 +158,14 @@ const fr = {
     target: (org, env) => `Environnement : ${org} (${env})`, production: 'Ceci est un environnement de PRODUCTION. La modification s’applique immédiatement.',
     add: 'Ajouter', removeBtn: 'Retirer', cancel: 'Annuler', back: 'Retour', undo: 'Annuler la modification', working: 'Application…',
     added: (u, q) => `${u} ajouté à « ${q} »`, removed: (u, q) => `${u} retiré de « ${q} »`, failed: 'La modification n’a pas pu être appliquée',
+    newQueue: '+ Nouvelle file', queueTitle: 'Nouvelle file', name: 'Nom', queueType: 'Type', strategy: 'Méthode d’attribution', priority: 'Priorité', hours: 'Horaires', none: '(aucun)',
+    confirmQueue: (n) => `La file omnicanal « ${n} » sera créée. Ajoutez-y ensuite des agents depuis sa carte.`, queueCreated: (n) => `File « ${n} » créée`, queueDeleted: (n) => `File « ${n} » supprimée`,
+    addRule: '+ Ajouter une règle', removeRule: 'Supprimer la règle', ruleTitle: (rs) => `Nouvelle règle dans « ${rs} »`, ruleName: 'Nom de la règle',
+    conditions: 'Conditions (toutes doivent être vraies)', addCondition: '+ Condition', noConditions: 'Aucune condition : la règle s’applique toujours.', then: 'Alors', routeTo: 'Router vers la file',
+    setVar: 'Définir', addSet: '+ Définir une autre variable', value: 'Valeur', appendNote: 'La règle est ajoutée à la fin ; les règles sont évaluées dans l’ordre.',
+    confirmRule: (rs) => `Cette règle sera ajoutée à la fin de « ${rs} » :`, confirmRemoveRule: (rs) => `Cette règle sera supprimée de « ${rs} » :`,
+    ruleAdded: (rs) => `Règle ajoutée à « ${rs} »`, ruleRemoved: (rs) => `Règle supprimée de « ${rs} »`, removeRuleTitle: 'Supprimer une règle',
+    stale: 'Cet ensemble de règles a été modifié ailleurs après le chargement de la carte. Rechargez l’outil et réessayez.', loadingContract: 'Lecture du contrat de l’ensemble de règles…', next: 'Suivant', required: 'Renseignez le nom et toutes les valeurs.',
   },
 }
 
@@ -168,6 +200,14 @@ const de = {
     target: (org, env) => `Umgebung: ${org} (${env})`, production: 'Dies ist eine PRODUKTIONSUMGEBUNG. Die Änderung wird sofort wirksam.',
     add: 'Hinzufügen', removeBtn: 'Entfernen', cancel: 'Abbrechen', back: 'Zurück', undo: 'Rückgängig', working: 'Wird angewendet…',
     added: (u, q) => `${u} zu „${q}“ hinzugefügt`, removed: (u, q) => `${u} aus „${q}“ entfernt`, failed: 'Die Änderung konnte nicht angewendet werden',
+    newQueue: '+ Neue Warteschlange', queueTitle: 'Neue Warteschlange', name: 'Name', queueType: 'Typ', strategy: 'Zuweisungsmethode', priority: 'Priorität', hours: 'Geschäftszeiten', none: '(keine)',
+    confirmQueue: (n) => `Die Omnichannel-Warteschlange „${n}“ wird erstellt. Agenten fügst du danach über ihre Karte hinzu.`, queueCreated: (n) => `Warteschlange „${n}“ erstellt`, queueDeleted: (n) => `Warteschlange „${n}“ gelöscht`,
+    addRule: '+ Regel hinzufügen', removeRule: 'Regel löschen', ruleTitle: (rs) => `Neue Regel in „${rs}“`, ruleName: 'Regelname',
+    conditions: 'Bedingungen (alle müssen zutreffen)', addCondition: '+ Bedingung', noConditions: 'Keine Bedingungen: die Regel gilt immer.', then: 'Dann', routeTo: 'An Warteschlange weiterleiten',
+    setVar: 'Setzen', addSet: '+ Weitere Variable setzen', value: 'Wert', appendNote: 'Die Regel wird am Ende hinzugefügt; Regeln werden der Reihe nach ausgewertet.',
+    confirmRule: (rs) => `Diese Regel wird am Ende von „${rs}“ hinzugefügt:`, confirmRemoveRule: (rs) => `Diese Regel wird aus „${rs}“ gelöscht:`,
+    ruleAdded: (rs) => `Regel zu „${rs}“ hinzugefügt`, ruleRemoved: (rs) => `Regel aus „${rs}“ gelöscht`, removeRuleTitle: 'Regel löschen',
+    stale: 'Dieser Regelsatz wurde nach dem Laden der Karte an anderer Stelle geändert. Lade das Tool neu und versuche es erneut.', loadingContract: 'Vertrag des Regelsatzes wird gelesen…', next: 'Weiter', required: 'Name und alle Werte ausfüllen.',
   },
 }
 
@@ -202,6 +242,14 @@ const it = {
     target: (org, env) => `Ambiente: ${org} (${env})`, production: 'Questo è un ambiente di PRODUZIONE. La modifica viene applicata subito.',
     add: 'Aggiungi', removeBtn: 'Rimuovi', cancel: 'Annulla', back: 'Indietro', undo: 'Annulla modifica', working: 'Applicazione…',
     added: (u, q) => `${u} aggiunto a "${q}"`, removed: (u, q) => `${u} rimosso da "${q}"`, failed: 'Impossibile applicare la modifica',
+    newQueue: '+ Nuova coda', queueTitle: 'Nuova coda', name: 'Nome', queueType: 'Tipo', strategy: 'Metodo di assegnazione', priority: 'Priorità', hours: 'Orario', none: '(nessuno)',
+    confirmQueue: (n) => `Verrà creata la coda omnicanale "${n}". Poi aggiungi gli agenti dalla sua scheda.`, queueCreated: (n) => `Coda "${n}" creata`, queueDeleted: (n) => `Coda "${n}" eliminata`,
+    addRule: '+ Aggiungi regola', removeRule: 'Elimina regola', ruleTitle: (rs) => `Nuova regola in "${rs}"`, ruleName: 'Nome della regola',
+    conditions: 'Condizioni (devono essere tutte vere)', addCondition: '+ Condizione', noConditions: 'Nessuna condizione: la regola si applica sempre.', then: 'Allora', routeTo: 'Instrada alla coda',
+    setVar: 'Imposta', addSet: '+ Imposta un’altra variabile', value: 'Valore', appendNote: 'La regola viene aggiunta in fondo; le regole sono valutate in ordine.',
+    confirmRule: (rs) => `Questa regola verrà aggiunta in fondo a "${rs}":`, confirmRemoveRule: (rs) => `Questa regola verrà eliminata da "${rs}":`,
+    ruleAdded: (rs) => `Regola aggiunta a "${rs}"`, ruleRemoved: (rs) => `Regola eliminata da "${rs}"`, removeRuleTitle: 'Elimina una regola',
+    stale: 'Questo set di regole è stato modificato altrove dopo il caricamento della mappa. Ricarica lo strumento e riprova.', loadingContract: 'Lettura del contratto del set di regole…', next: 'Avanti', required: 'Compila il nome e tutti i valori.',
   },
 }
 
