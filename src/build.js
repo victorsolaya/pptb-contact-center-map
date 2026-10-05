@@ -112,7 +112,7 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
 
   // --- edges
   for (const [ruleId, type, guid] of ruleTargets) {
-    if (type === 'queue' && !nodes.has(key('queue', guid))) node('queue', guid, `${t.text.queue} ${normGuid(guid).slice(0, 8)}…`, t.text.queueNotFound)
+    if (type === 'queue' && !nodes.has(key('queue', guid))) nodes.get(node('queue', guid, `${t.text.queue} ${normGuid(guid).slice(0, 8)}…`, t.text.queueNotFound)).missing = true
     edge(ruleId, key(type, guid), 'route', null)
   }
   for (const o of rows(raw, 'overflowActions'))

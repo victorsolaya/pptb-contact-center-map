@@ -26,7 +26,7 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 
 ## Permissions
 
-The tool only reads data. The connected user (or application user) needs read access to the Omnichannel configuration tables, such as `msdyn_liveworkstream`, `msdyn_routingconfiguration`, `msdyn_decisionruleset`, `msdyn_assignmentconfiguration`, `queue`, `queuemembership`, `systemuser`, `msdyn_operatinghour`, `msdyn_overflowactionconfig` and the channel tables.
+The map only needs read access; Edit mode needs the privileges listed in [What this tool changes](#what-this-tool-changes). The connected user (or application user) needs read access to the Omnichannel configuration tables, such as `msdyn_liveworkstream`, `msdyn_routingconfiguration`, `msdyn_decisionruleset`, `msdyn_decisioncontract`, `msdyn_assignmentconfiguration`, `queue`, `queuemembership`, `systemuser`, `msdyn_operatinghour`, `msdyn_overflowactionconfig` and the channel tables.
 
 If a table cannot be read, the map is still drawn and the sidebar lists which tables failed and why.
 

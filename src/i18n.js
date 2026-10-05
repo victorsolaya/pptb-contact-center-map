@@ -41,6 +41,7 @@ const en = {
     ruleAdded: (rs) => `Rule added to "${rs}"`, ruleRemoved: (rs) => `Rule deleted from "${rs}"`, removeRuleTitle: 'Delete a rule',
     stale: 'This ruleset was changed elsewhere after the map was loaded. Reload the tool and try again.', loadingContract: 'Reading the ruleset contract…', next: 'Next', required: 'Fill in the name and every value.',
     contextVars: 'Context variables', otherAttrs: 'Other attributes', banner: (org, env) => `Edit mode · changes apply to ${org} (${env})`,
+    and: 'AND', badDefinition: 'This ruleset has no rule list the tool can edit. Open it once in the admin center and try again.', ruleNotFound: 'This rule is no longer in the ruleset. Refresh the map and try again.',
   },
 }
 
@@ -84,6 +85,7 @@ const es = {
     ruleAdded: (rs) => `Regla añadida a «${rs}»`, ruleRemoved: (rs) => `Regla eliminada de «${rs}»`, removeRuleTitle: 'Eliminar una regla',
     stale: 'Este conjunto de reglas se ha modificado en otro sitio después de cargar el mapa. Recarga la herramienta y vuelve a intentarlo.', loadingContract: 'Leyendo el contrato del conjunto de reglas…', next: 'Siguiente', required: 'Rellena el nombre y todos los valores.',
     contextVars: 'Variables de contexto', otherAttrs: 'Otros atributos', banner: (org, env) => `Modo edición · los cambios se aplican en ${org} (${env})`,
+    and: 'Y', badDefinition: 'Este conjunto de reglas no tiene una lista de reglas que la herramienta pueda editar. Ábrelo una vez en el admin center y vuelve a intentarlo.', ruleNotFound: 'Esta regla ya no está en el conjunto. Refresca el mapa y vuelve a intentarlo.',
   },
 }
 
@@ -127,6 +129,7 @@ const pt = {
     ruleAdded: (rs) => `Regra adicionada a "${rs}"`, ruleRemoved: (rs) => `Regra excluída de "${rs}"`, removeRuleTitle: 'Excluir uma regra',
     stale: 'Este conjunto de regras foi alterado em outro lugar depois que o mapa foi carregado. Recarregue a ferramenta e tente novamente.', loadingContract: 'Lendo o contrato do conjunto de regras…', next: 'Avançar', required: 'Preencha o nome e todos os valores.',
     contextVars: 'Variáveis de contexto', otherAttrs: 'Outros atributos', banner: (org, env) => `Modo de edição · as alterações se aplicam a ${org} (${env})`,
+    and: 'E', badDefinition: 'Este conjunto de regras não tem uma lista de regras que a ferramenta possa editar. Abra-o uma vez no centro de administração e tente novamente.', ruleNotFound: 'Esta regra já não está no conjunto. Atualize o mapa e tente novamente.',
   },
 }
 
@@ -170,6 +173,7 @@ const fr = {
     ruleAdded: (rs) => `Règle ajoutée à « ${rs} »`, ruleRemoved: (rs) => `Règle supprimée de « ${rs} »`, removeRuleTitle: 'Supprimer une règle',
     stale: 'Cet ensemble de règles a été modifié ailleurs après le chargement de la carte. Rechargez l’outil et réessayez.', loadingContract: 'Lecture du contrat de l’ensemble de règles…', next: 'Suivant', required: 'Renseignez le nom et toutes les valeurs.',
     contextVars: 'Variables de contexte', otherAttrs: 'Autres attributs', banner: (org, env) => `Mode édition · les modifications s’appliquent à ${org} (${env})`,
+    and: 'ET', badDefinition: 'Cet ensemble de règles n’a pas de liste de règles modifiable par l’outil. Ouvrez-le une fois dans le centre d’administration et réessayez.', ruleNotFound: 'Cette règle ne fait plus partie de l’ensemble. Actualisez la carte et réessayez.',
   },
 }
 
@@ -213,6 +217,7 @@ const de = {
     ruleAdded: (rs) => `Regel zu „${rs}“ hinzugefügt`, ruleRemoved: (rs) => `Regel aus „${rs}“ gelöscht`, removeRuleTitle: 'Regel löschen',
     stale: 'Dieser Regelsatz wurde nach dem Laden der Karte an anderer Stelle geändert. Lade das Tool neu und versuche es erneut.', loadingContract: 'Vertrag des Regelsatzes wird gelesen…', next: 'Weiter', required: 'Name und alle Werte ausfüllen.',
     contextVars: 'Kontextvariablen', otherAttrs: 'Weitere Attribute', banner: (org, env) => `Bearbeitungsmodus · Änderungen gelten für ${org} (${env})`,
+    and: 'UND', badDefinition: 'Dieser Regelsatz hat keine Regelliste, die das Tool bearbeiten kann. Öffne ihn einmal im Admin Center und versuche es erneut.', ruleNotFound: 'Diese Regel ist nicht mehr im Regelsatz. Aktualisiere die Karte und versuche es erneut.',
   },
 }
 
@@ -256,6 +261,7 @@ const it = {
     ruleAdded: (rs) => `Regola aggiunta a "${rs}"`, ruleRemoved: (rs) => `Regola eliminata da "${rs}"`, removeRuleTitle: 'Elimina una regola',
     stale: 'Questo set di regole è stato modificato altrove dopo il caricamento della mappa. Ricarica lo strumento e riprova.', loadingContract: 'Lettura del contratto del set di regole…', next: 'Avanti', required: 'Compila il nome e tutti i valori.',
     contextVars: 'Variabili di contesto', otherAttrs: 'Altri attributi', banner: (org, env) => `Modalità modifica · le modifiche si applicano a ${org} (${env})`,
+    and: 'E', badDefinition: 'Questo set di regole non ha un elenco di regole modificabile dallo strumento. Aprilo una volta nell’interfaccia di amministrazione e riprova.', ruleNotFound: 'Questa regola non è più nel set. Aggiorna la mappa e riprova.',
   },
 }
 

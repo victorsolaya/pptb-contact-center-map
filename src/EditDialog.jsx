@@ -110,7 +110,7 @@ const FV = '@OData.Community.Display.V1.FormattedValue'
 const usedOptions = (rows, field) => [...new Map(rows.filter((r) => r[field] != null).map((r) => [r[field], r[field + FV] ?? String(r[field])])).entries()]
 
 // Type and assignment method only offer values that existing omnichannel queues already use.
-export function QueueDialog({ raw, org, env, busy, error, onApply, onClose, t }) {
+export function QueueDialog({ raw, org, env, busy, error, onApply, onBack, onClose, t }) {
   const queues = Array.isArray(raw.queues) ? raw.queues : []
   const hours = Array.isArray(raw.operatingHours) ? raw.operatingHours : []
   const types = usedOptions(queues, 'msdyn_queuetype')
@@ -154,7 +154,7 @@ export function QueueDialog({ raw, org, env, busy, error, onApply, onClose, t })
   return (
     <Modal tone="queue" title={t.edit.queueTitle} subtitle={form.name.trim()} onClose={close}
       footer={<>
-        <button disabled={busy} onClick={() => setStep('form')}>{t.edit.back}</button>
+        <button disabled={busy} onClick={() => { onBack(); setStep('form') }}>{t.edit.back}</button>
         <button disabled={busy} onClick={onClose}>{t.edit.cancel}</button>
         <button className="primary" disabled={busy}
           onClick={() => onApply({ name: form.name.trim(), type: form.type, strategy, priority: Number(form.priority) || 0, hoursId: form.hoursId || null })}>
@@ -177,7 +177,8 @@ export function QueueDialog({ raw, org, env, busy, error, onApply, onClose, t })
 
 const CONTEXT = 'liveworkitemcontext.'
 const shortName = (attr) => (attr.startsWith(CONTEXT) ? attr.slice(CONTEXT.length) : attr)
-const uniq = (vars) => [...new Map(vars.map((v) => [v.attr, v])).values()].sort((a, b) => shortName(a.attr).localeCompare(shortName(b.attr)))
+// first occurrence wins, so contract variables (typed) take precedence over attributes seen in rules (untyped)
+const uniq = (vars) => [...new Map(vars.reverse().map((v) => [v.attr, v])).values()].sort((a, b) => shortName(a.attr).localeCompare(shortName(b.attr)))
 // attributes a ruleset already reads (conditions) or writes (set actions)
 const usedAttrs = (xml, tag) =>
   [...(xml ?? '').matchAll(new RegExp(`<${tag}[^>]*>\\s*<lhs type="attribute">([^<]+)</lhs>`, 'g'))]
@@ -209,7 +210,7 @@ function ValueInput({ type, value, onChange, t }) {
 
 // Conditions only offer variables of the ruleset's input contract (or attributes its rules already use) and
 // operators already used somewhere in the org: nothing the routing engine hasn't seen before.
-export function RuleDialog({ ruleset, raw, queues, org, env, busy, error, onApply, onClose, t }) {
+export function RuleDialog({ ruleset, raw, queues, org, env, busy, error, onApply, onBack, onClose, t }) {
   const route = ruleset.kind === 'route'
   const [vars, setVars] = useState(null) // { inputs, outputs } | { error }
   const [form, setForm] = useState({ name: '', conditions: [], queue: queues[0]?.id ?? '', sets: [{ attr: '', value: '' }] })
@@ -253,7 +254,7 @@ export function RuleDialog({ ruleset, raw, queues, org, env, busy, error, onAppl
               {form.conditions.length === 0 && <p className="muted small">{t.edit.noConditions}</p>}
               {form.conditions.map((c, i) => (
                 <div key={i}>
-                  {i > 0 && <span className="and">AND</span>}
+                  {i > 0 && <span className="and">{t.edit.and}</span>}
                   <div className="cond-row">
                     <AttrSelect vars={vars.inputs} value={c.attr} onChange={(attr) => upd('conditions', i, { attr })} t={t} />
                     <select className="op" value={c.op} onChange={(e) => upd('conditions', i, { op: e.target.value })}>{ops.map((o) => <option key={o}>{o}</option>)}</select>
@@ -296,7 +297,7 @@ export function RuleDialog({ ruleset, raw, queues, org, env, busy, error, onAppl
   return (
     <Modal tone="rule" title={t.edit.ruleTitle(ruleset.label)} onClose={close}
       footer={<>
-        <button disabled={busy} onClick={() => setStep('form')}>{t.edit.back}</button>
+        <button disabled={busy} onClick={() => { onBack(); setStep('form') }}>{t.edit.back}</button>
         <button disabled={busy} onClick={onClose}>{t.edit.cancel}</button>
         <button className="primary" disabled={busy}
           onClick={() => onApply({ id: newId(), name: form.name.trim(), conditions: form.conditions, sets: route ? [{ attr: 'assign_to.queue', value: form.queue }] : form.sets })}>

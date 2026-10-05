@@ -46,7 +46,7 @@ function NodeBody({ data }) {
       <div className="lbl">{data.label}</div>
       {data.sub && <div className="sub">{data.sub}</div>}
       {data.sets?.length > 0 && <div className="sets">→ {data.sets.join(', ')}</div>}
-      {data.edit && data.type === 'ruleset' && data.kind && <button className="add add-rule nodrag" onClick={stop(data.onAddRule)}>{t.edit.addRule}</button>}
+      {data.edit && data.type === 'ruleset' && data.kind && /<rules[\s/>]/.test(data.xml) && <button className="add add-rule nodrag" onClick={stop(data.onAddRule)}>{t.edit.addRule}</button>}
       {secs.map(([k, color]) => {
         const open = data.isOpen(k)
         const title = t.sections[k]
@@ -120,7 +120,7 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t, theme, edit, onAdd, o
     setAll: (keys, value) => setOpen((o) => { const m = new Map(o); for (const k of keys) m.set(`${n.id}:${k}`, value); return m }),
     onPick: onSelect,
     edit,
-    members: edit && n.type === 'queue' ? n.members ?? [] : n.members, // edit mode: empty queues can get agents too
+    members: edit && n.type === 'queue' && !n.missing ? n.members ?? [] : n.members, // edit mode: empty queues can get agents too
     onAdd: () => onAdd(n),
     onRemove: (m) => onRemove(n, m),
     onAddRule: () => onAddRule(n),
@@ -240,6 +240,10 @@ export default function App() {
       setError(null)
       setFocusId(null)
       setSelId(null)
+      // nothing from the previous connection may act on the new one
+      setDialog(null)
+      setToast(null)
+      setEdit(false)
       loadSnapshot().then(setSnap, (e) => setError(e.message))
     }
     load()
@@ -283,9 +287,9 @@ export default function App() {
   // After a change only the affected tables are re-read (focus and layout stay put).
   async function refreshTables(keys) {
     const part = await loadFromPptb(keys)
-    if (part) setSnap((s) => ({ ...s, raw: { ...s.raw, ...part.raw } }))
+    if (part) setSnap((s) => s && { ...s, raw: { ...s.raw, ...part.raw } }) // s is undefined if the connection changed meanwhile
   }
-  const errText = (e) => (e?.code === 'stale' ? t.edit.stale : String(e?.message ?? e))
+  const errText = (e) => ({ stale: t.edit.stale, badDefinition: t.edit.badDefinition, ruleNotFound: t.edit.ruleNotFound })[e?.code] ?? String(e?.message ?? e)
   // `change` applies one change and returns the function that reverts it (offered as Undo).
   async function perform(change, text) {
     setBusy(true)
@@ -324,17 +328,18 @@ export default function App() {
     }, t.edit.queueCreated(form.name))
   // Rulesets are written whole: the new XML only differs by the added/removed <rule>, and every write
   // first checks nobody changed the ruleset since it was read. Undo writes the previous XML back.
-  const writeRules = (ruleset, next, text) =>
+  const writeRules = (ruleset, makeNext, text) =>
     perform(async () => {
       const before = ruleset.xml
+      const next = makeNext(before)
       await writeRuleset(ruleset.guid, before, next)
       await refreshTables(RULE_TABLES)
       return async () => { await writeRuleset(ruleset.guid, next, before); await refreshTables(RULE_TABLES) }
     }, text)
-  const applyRule = (ruleset, rule) => writeRules(ruleset, appendRule(ruleset.xml, buildRuleXml(rule)), t.edit.ruleAdded(ruleset.label))
-  const applyRemoveRule = (ruleset, rule) => writeRules(ruleset, removeRule(ruleset.xml, rule.ruleId), t.edit.ruleRemoved(ruleset.label))
+  const applyRule = (ruleset, rule) => writeRules(ruleset, (xml) => appendRule(xml, buildRuleXml(rule)), t.edit.ruleAdded(ruleset.label))
+  const applyRemoveRule = (ruleset, rule) => writeRules(ruleset, (xml) => removeRule(xml, rule.ruleId), t.edit.ruleRemoved(ruleset.label))
   const queueOptions = graph.nodes
-    .filter((n) => n.type === 'queue' && n.sub !== t.text.queueNotFound)
+    .filter((n) => n.type === 'queue' && !n.missing)
     .map((n) => ({ id: n.id.split(':')[1], label: n.label }))
     .sort((a, b) => a.label.localeCompare(b.label))
   const openDialog = (d) => { setEditError(null); setDialog(d) }
@@ -344,7 +349,7 @@ export default function App() {
       await toast.undo()
       setToast(null)
     } catch (e) {
-      notify(t.edit.failed, String(e?.message ?? e), 'error')
+      notify(t.edit.failed, errText(e), 'error')
     } finally {
       setBusy(false)
     }
@@ -428,14 +433,14 @@ export default function App() {
         </aside>
       )}
       {(dialog?.kind === 'add' || dialog?.kind === 'confirm') && (
-        <EditDialog dialog={dialog} setDialog={setDialog} apply={applyMember} busy={busy} error={editError} org={snap.org} env={snap.environment} t={t} />
+        <EditDialog dialog={dialog} setDialog={(d) => { setEditError(null); setDialog(d) }} apply={applyMember} busy={busy} error={editError} org={snap.org} env={snap.environment} t={t} />
       )}
       {dialog?.kind === 'queue' && (
-        <QueueDialog raw={snap.raw} org={snap.org} env={snap.environment} busy={busy} error={editError} onApply={applyQueue} onClose={() => setDialog(null)} t={t} />
+        <QueueDialog raw={snap.raw} org={snap.org} env={snap.environment} busy={busy} error={editError} onApply={applyQueue} onBack={() => setEditError(null)} onClose={() => setDialog(null)} t={t} />
       )}
       {dialog?.kind === 'rule' && (
         <RuleDialog ruleset={dialog.ruleset} raw={snap.raw} queues={queueOptions} org={snap.org} env={snap.environment} busy={busy} error={editError}
-          onApply={(rule) => applyRule(dialog.ruleset, rule)} onClose={() => setDialog(null)} t={t} />
+          onApply={(rule) => applyRule(dialog.ruleset, rule)} onBack={() => setEditError(null)} onClose={() => setDialog(null)} t={t} />
       )}
       {dialog?.kind === 'removeRule' && (
         <RemoveRuleDialog rule={dialog.rule} ruleset={dialog.ruleset} org={snap.org} env={snap.environment} busy={busy} error={editError}

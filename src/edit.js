@@ -84,13 +84,13 @@ export function appendRule(xml, ruleXml) {
   const empty = /<rules\s*\/>/
   if (empty.test(xml)) return xml.replace(empty, `<rules>\n${ruleXml}\n  </rules>`)
   const i = xml.lastIndexOf('</rules>')
-  if (i < 0) throw new Error('Unexpected ruleset definition: no <rules> element')
+  if (i < 0) throw Object.assign(new Error('no <rules> element'), { code: 'badDefinition' })
   return xml.slice(0, i).replace(/\s*$/, '\n') + ruleXml + '\n  ' + xml.slice(i)
 }
 
 export function removeRule(xml, ruleId) {
   const re = new RegExp(`\\r?\\n?[ \\t]*<rule id="${ruleId.replace(/[^\w-]/g, '')}"[\\s\\S]*?</rule>`)
-  if (!re.test(xml)) throw new Error('Rule not found in the current definition')
+  if (!re.test(xml)) throw Object.assign(new Error('rule not found'), { code: 'ruleNotFound' })
   return xml.replace(re, '')
 }
 
