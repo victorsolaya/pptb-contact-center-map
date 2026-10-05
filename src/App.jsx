@@ -7,15 +7,10 @@ import { buildGraph } from './build.js'
 import { inPptb, loadFromPptb, saveFile, copyText } from './pptb.js'
 import { LANGS, initialLang, saveLang } from './i18n.js'
 
-// Power Platform ToolBox: the host's active connection. Browser extension: snapshot stored by
-// background.js. `npm run dev`: dev/raw.json (gitignored). null = nothing to show yet.
+// Power Platform ToolBox: the host's active connection. `npm run dev`: dev/raw.json (gitignored,
+// a saved Web API snapshot of a real org). null = nothing to show yet.
 async function loadSnapshot() {
   if (inPptb()) return loadFromPptb()
-  if (globalThis.chrome?.storage) {
-    const { snap } = await chrome.storage.local.get('snap')
-    if (snap?.error) throw new Error(snap.error)
-    if (snap) return snap
-  }
   const r = await fetch('dev/raw.json')
   return r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null
 }

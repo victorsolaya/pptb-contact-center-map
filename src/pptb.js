@@ -1,7 +1,7 @@
 // Inside Power Platform ToolBox the host owns the connection (interactive login, client secret...):
 // the tool never sees credentials, it only calls window.dataverseAPI. queryData already asks for
 // FormattedValue annotations and returns @odata.nextLink, which we follow for >5000-row tables.
-import { QUERIES } from '../public/queries.js'
+import { QUERIES } from './queries.js'
 
 export const inPptb = () => Boolean(globalThis.toolboxAPI && globalThis.dataverseAPI)
 

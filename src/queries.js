@@ -1,4 +1,4 @@
-// Contact Center config read from the Dataverse Web API. Shared by the extension and the server.
+// Contact Center config read from the Dataverse Web API (OData paths, relative to /api/data/v9.2/).
 
 export const QUERIES = {
   workstreams: 'msdyn_liveworkstreams?$select=msdyn_name,msdyn_streamsource,msdyn_mode,msdyn_direction,msdyn_workdistributionmode,msdyn_capacityrequired,msdyn_capacityformat,_msdyn_defaultqueue_value,_msdyn_bot_user_value,statecode',
@@ -21,33 +21,4 @@ export const QUERIES = {
   facebook: 'msdyn_ocfbpages?$select=msdyn_fbpagename,_msdyn_liveworkstreamid_value',
   sms: 'msdyn_ocsmschannelsettings?$select=msdyn_name,_msdyn_liveworkstreamid_value',
   custom: 'msdyn_occustommessagingchannels?$select=msdyn_name,_msdyn_liveworkstreamid_value',
-}
-
-// Runs inside the D365 tab (extension: base '' + session cookie) or on the server (base = org URL +
-// bearer token), so it must be self-contained: no closures over this file.
-export async function fetchAll(queries, base = '', auth = {}) {
-  const headers = {
-    ...auth,
-    Accept: 'application/json',
-    'OData-Version': '4.0',
-    'OData-MaxVersion': '4.0',
-    Prefer: 'odata.include-annotations="OData.Community.Display.V1.FormattedValue",odata.maxpagesize=5000',
-  }
-  const out = {}
-  await Promise.all(Object.entries(queries).map(async ([key, q]) => {
-    try {
-      const rows = []
-      for (let url = base + '/api/data/v9.2/' + q; url; ) {
-        const r = await fetch(url, { headers })
-        if (!r.ok) throw new Error(`${r.status} ${(await r.text()).slice(0, 300)}`)
-        const j = await r.json()
-        rows.push(...j.value)
-        url = j['@odata.nextLink']
-      }
-      out[key] = rows
-    } catch (e) {
-      out[key] = { error: String(e.message ?? e) }
-    }
-  }))
-  return out
 }

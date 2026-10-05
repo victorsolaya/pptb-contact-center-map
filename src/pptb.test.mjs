@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { QUERIES } from '../public/queries.js'
+import { QUERIES } from './queries.js'
 
 // fake PPTB host: memberships come in two pages, rulesets fails
 const calls = []
