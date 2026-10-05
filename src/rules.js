@@ -42,6 +42,7 @@ export const simplify = (when, t) =>
     .replace(/([\w.]+) not-null AND \1 /g, '$1 ')
     .replace(/[\w.]*iswithinoperatinghour == "false"/g, t.text.outsideHours)
     .replace(/[\w.]*iswithinoperatinghour == "true"/g, t.text.insideHours)
+    .replace(/\bliveworkitemcontext\./g, '') // context variables read better by their own name
 
 export function parseRules(xml) {
   const rules = []

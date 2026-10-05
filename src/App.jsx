@@ -5,8 +5,9 @@ import { toPng } from 'html-to-image'
 import { TYPES, SECTIONS, neighborhood, toMermaid, foldIntoQueues } from './graph.js'
 import { buildGraph } from './build.js'
 import { inPptb, loadFromPptb, saveFile, copyText, currentTheme, notify } from './pptb.js'
-import { addMember, removeMember, MEMBER_TABLES } from './edit.js'
-import { EditDialog, Toast } from './EditDialog.jsx'
+import { addMember, removeMember, createQueue, deleteQueue, appendRule, removeRule, buildRuleXml, writeRuleset, MEMBER_TABLES, QUEUE_TABLES, RULE_TABLES } from './edit.js'
+import { EditDialog, Toast, QueueDialog, RuleDialog, RemoveRuleDialog } from './EditDialog.jsx'
+import { normGuid } from './rules.js'
 import { LANGS, initialLang, saveLang } from './i18n.js'
 
 // Power Platform ToolBox: the host's active connection. `npm run dev`: dev/raw.json (gitignored,
@@ -40,9 +41,12 @@ function NodeBody({ data }) {
       <div className="top">
         <div className="kind" style={{ background: color }}>{t.types[data.type] ?? data.type}</div>
         {secs.length > 0 && <MinButton t={t} open={anyOpen} title={t.text.allBoxes} onClick={() => data.setAll(secs.map(([k]) => k), !anyOpen)} />}
+        {data.edit && data.ruleEditable && <button className="rm nodrag" title={t.edit.removeRule} onClick={stop(data.onRemoveRule)}>×</button>}
       </div>
       <div className="lbl">{data.label}</div>
       {data.sub && <div className="sub">{data.sub}</div>}
+      {data.sets?.length > 0 && <div className="sets">→ {data.sets.join(', ')}</div>}
+      {data.edit && data.type === 'ruleset' && data.kind && <button className="add add-rule nodrag" onClick={stop(data.onAddRule)}>{t.edit.addRule}</button>}
       {secs.map(([k, color]) => {
         const open = data.isOpen(k)
         const title = t.sections[k]
@@ -98,7 +102,7 @@ async function layout(view, size) {
   return new Map(res.children.map((c) => [c.id, { x: c.x, y: c.y }]))
 }
 
-function Diagram({ graph, focusId, hideTypes, onSelect, t, theme, edit, onAdd, onRemove }) {
+function Diagram({ graph, focusId, hideTypes, onSelect, t, theme, edit, onAdd, onRemove, onAddRule, onRemoveRule }) {
   const [flow, setFlow] = useState({ nodes: [], edges: [] })
   const [open, setOpen] = useState(new Map()) // `${nodeId}:${section}` -> bool
   const [hi, setHi] = useState(null) // clicked node: light up what it relates to
@@ -119,6 +123,9 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t, theme, edit, onAdd, o
     members: edit && n.type === 'queue' ? n.members ?? [] : n.members, // edit mode: empty queues can get agents too
     onAdd: () => onAdd(n),
     onRemove: (m) => onRemove(n, m),
+    onAddRule: () => onAddRule(n),
+    ruleEditable: n.type === 'rule' && !!graph.nodes.find((x) => x.id === n.rulesetId)?.kind,
+    onRemoveRule: () => onRemoveRule(n),
   })
   const sections = view?.nodes.flatMap((n) => SECTIONS.filter(([k]) => n[k]).map(([k]) => [n.id, k])) ?? []
   const allOpen = sections.length > 0 && sections.every(([id, k]) => isOpen(id, k))
@@ -273,29 +280,64 @@ export default function App() {
     loadSnapshot().then(setSnap, (e) => setError(e.message)).finally(() => setRefreshing(false))
   }
 
-  // One membership change, then re-read only memberships/users (focus and layout stay put).
-  async function run(action, queue, user) {
-    await (action === 'add' ? addMember : removeMember)(queue.id, user.id)
-    const part = await loadFromPptb(MEMBER_TABLES)
+  // After a change only the affected tables are re-read (focus and layout stay put).
+  async function refreshTables(keys) {
+    const part = await loadFromPptb(keys)
     if (part) setSnap((s) => ({ ...s, raw: { ...s.raw, ...part.raw } }))
   }
-  async function apply() {
-    const { action, queue, user } = dialog
+  const errText = (e) => (e?.code === 'stale' ? t.edit.stale : String(e?.message ?? e))
+  // `change` applies one change and returns the function that reverts it (offered as Undo).
+  async function perform(change, text) {
     setBusy(true)
     setEditError(null)
     try {
-      await run(action, queue, user)
-      const text = action === 'add' ? t.edit.added(user.label, queue.label) : t.edit.removed(user.label, queue.label)
-      notify(t.edit.mode, `${text} · ${snap.org} (${snap.environment})`, 'success')
-      setToast({ text: `${text} · ${snap.org} (${snap.environment})`, undo: () => run(action === 'add' ? 'remove' : 'add', queue, user) })
+      const revert = await change()
+      const msg = `${text} · ${snap.org} (${snap.environment})`
+      notify(t.edit.mode, msg, 'success')
+      setToast({ text: msg, undo: revert })
       setDialog(null)
     } catch (e) {
-      setEditError(String(e?.message ?? e))
-      notify(t.edit.failed, String(e?.message ?? e), 'error')
+      setEditError(errText(e))
+      notify(t.edit.failed, errText(e), 'error')
     } finally {
       setBusy(false)
     }
   }
+
+  async function member(action, queue, user) {
+    await (action === 'add' ? addMember : removeMember)(queue.id, user.id)
+    await refreshTables(MEMBER_TABLES)
+  }
+  const applyMember = () => {
+    const { action, queue, user } = dialog
+    return perform(async () => {
+      await member(action, queue, user)
+      return () => member(action === 'add' ? 'remove' : 'add', queue, user)
+    }, action === 'add' ? t.edit.added(user.label, queue.label) : t.edit.removed(user.label, queue.label))
+  }
+  const applyQueue = (form) =>
+    perform(async () => {
+      const id = await createQueue(form)
+      await refreshTables(QUEUE_TABLES)
+      focus(`queue:${normGuid(id)}`)
+      return async () => { await deleteQueue(id); await refreshTables(QUEUE_TABLES) }
+    }, t.edit.queueCreated(form.name))
+  // Rulesets are written whole: the new XML only differs by the added/removed <rule>, and every write
+  // first checks nobody changed the ruleset since it was read. Undo writes the previous XML back.
+  const writeRules = (ruleset, next, text) =>
+    perform(async () => {
+      const before = ruleset.xml
+      await writeRuleset(ruleset.guid, before, next)
+      await refreshTables(RULE_TABLES)
+      return async () => { await writeRuleset(ruleset.guid, next, before); await refreshTables(RULE_TABLES) }
+    }, text)
+  const applyRule = (ruleset, rule) => writeRules(ruleset, appendRule(ruleset.xml, buildRuleXml(rule)), t.edit.ruleAdded(ruleset.label))
+  const applyRemoveRule = (ruleset, rule) => writeRules(ruleset, removeRule(ruleset.xml, rule.ruleId), t.edit.ruleRemoved(ruleset.label))
+  const queueOptions = graph.nodes
+    .filter((n) => n.type === 'queue' && n.sub !== t.text.queueNotFound)
+    .map((n) => ({ id: n.id.split(':')[1], label: n.label }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+  const openDialog = (d) => { setEditError(null); setDialog(d) }
   async function undo() {
     setBusy(true)
     try {
@@ -327,6 +369,7 @@ export default function App() {
                 <input type="checkbox" checked={edit} onChange={(e) => setEdit(e.target.checked)} /> {t.edit.mode}
               </label>
             )}
+            {edit && <button className="newq" onClick={() => openDialog({ kind: 'queue' })}>{t.edit.newQueue}</button>}
           </div>
         )}
         {graph.meta.warnings.length > 0 && (
@@ -363,8 +406,11 @@ export default function App() {
       <main className="main">
         <ReactFlowProvider>
           <Diagram graph={graph} focusId={focusId} hideTypes={hideTypes} onSelect={setSelId} t={t} theme={theme} edit={edit}
-            onAdd={(queue) => { setEditError(null); setDialog({ kind: 'add', queue }) }}
-            onRemove={(queue, user) => { setEditError(null); setDialog({ kind: 'confirm', action: 'remove', queue, user }) }} />
+            onAdd={(queue) => openDialog({ kind: 'add', queue })}
+            onRemove={(queue, user) => openDialog({ kind: 'confirm', action: 'remove', queue, user })}
+            onAddRule={(ruleset) => openDialog({ kind: 'rule', ruleset })}
+            onRemoveRule={(rule) => openDialog({ kind: 'removeRule', rule, ruleset: graph.nodes.find((n) => n.id === rule.rulesetId) })} />
+          {edit && <div className={'edit-banner ' + (snap.environment ?? '').toLowerCase()}>✎ {t.edit.banner(snap.org, snap.environment ?? '?')}</div>}
           {toast && <Toast toast={toast} busy={busy} onUndo={undo} onClose={() => setToast(null)} t={t} />}
         </ReactFlowProvider>
       </main>
@@ -381,7 +427,20 @@ export default function App() {
           </dl>
         </aside>
       )}
-      {dialog && <EditDialog dialog={dialog} setDialog={setDialog} apply={apply} busy={busy} error={editError} org={snap.org} env={snap.environment} t={t} />}
+      {(dialog?.kind === 'add' || dialog?.kind === 'confirm') && (
+        <EditDialog dialog={dialog} setDialog={setDialog} apply={applyMember} busy={busy} error={editError} org={snap.org} env={snap.environment} t={t} />
+      )}
+      {dialog?.kind === 'queue' && (
+        <QueueDialog raw={snap.raw} org={snap.org} env={snap.environment} busy={busy} error={editError} onApply={applyQueue} onClose={() => setDialog(null)} t={t} />
+      )}
+      {dialog?.kind === 'rule' && (
+        <RuleDialog ruleset={dialog.ruleset} raw={snap.raw} queues={queueOptions} org={snap.org} env={snap.environment} busy={busy} error={editError}
+          onApply={(rule) => applyRule(dialog.ruleset, rule)} onClose={() => setDialog(null)} t={t} />
+      )}
+      {dialog?.kind === 'removeRule' && (
+        <RemoveRuleDialog rule={dialog.rule} ruleset={dialog.ruleset} org={snap.org} env={snap.environment} busy={busy} error={editError}
+          onApply={() => applyRemoveRule(dialog.ruleset, dialog.rule)} onClose={() => setDialog(null)} t={t} />
+      )}
     </div>
   )
 }

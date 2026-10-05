@@ -43,5 +43,26 @@ export async function installFakeHost() {
       raw.memberships = raw.memberships.filter((m) => !(m.queueid === queueId && m.systemuserid === userId))
       syncUsers()
     },
+    retrieve: async (entity, id) => {
+      if (entity === 'msdyn_decisionruleset') return { msdyn_rulesetdefinition: raw.rulesets.find((r) => r.msdyn_decisionrulesetid === id)?.msdyn_rulesetdefinition }
+      if (entity === 'msdyn_decisioncontract') return { msdyn_contractdefinition: raw.contracts.find((c) => c.msdyn_decisioncontractid === id)?.msdyn_contractdefinition }
+      throw new Error(`fake host: retrieve ${entity} not simulated`)
+    },
+    update: async (entity, id, record) => {
+      if (entity !== 'msdyn_decisionruleset') throw new Error(`fake host: update ${entity} not simulated`)
+      if (location.search.includes('stale')) throw new Error('simulated concurrent edit')
+      Object.assign(raw.rulesets.find((r) => r.msdyn_decisionrulesetid === id), record)
+    },
+    create: async (entity, record) => {
+      if (entity !== 'queue') throw new Error(`fake host: create ${entity} not simulated`)
+      const like = raw.queues.find((q) => q.msdyn_queuetype === record.msdyn_queuetype) ?? {}
+      const queueid = crypto.randomUUID()
+      raw.queues.push({ ...like, ...record, queueid, _msdyn_prequeueoverflowrulesetid_value: null, _msdyn_inqueueoverflowrulesetid_value: null, _msdyn_operatinghourid_value: record['msdyn_operatinghourid@odata.bind']?.match(/\((.+)\)/)?.[1] ?? null })
+      return { id: queueid }
+    },
+    delete: async (entity, id) => {
+      if (entity !== 'queue') throw new Error(`fake host: delete ${entity} not simulated`)
+      raw.queues = raw.queues.filter((q) => q.queueid !== id)
+    },
   }
 }

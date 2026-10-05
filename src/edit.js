@@ -89,7 +89,7 @@ export function appendRule(xml, ruleXml) {
 }
 
 export function removeRule(xml, ruleId) {
-  const re = new RegExp(`\\n?[ \\t]*<rule id="${ruleId.replace(/[^\w-]/g, '')}"[\\s\\S]*?</rule>`)
+  const re = new RegExp(`\\r?\\n?[ \\t]*<rule id="${ruleId.replace(/[^\w-]/g, '')}"[\\s\\S]*?</rule>`)
   if (!re.test(xml)) throw new Error('Rule not found in the current definition')
   return xml.replace(re, '')
 }

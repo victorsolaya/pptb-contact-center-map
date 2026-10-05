@@ -14,7 +14,7 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 - Every box inside a queue card (operating hours, PreQueue, InQueue, agents) can be minimized with its **−/+** button, or all at once from the toolbar.
 - One click on a card highlights its incoming path and everything below it; click the background to clear.
 - **Export PNG** for documents and **Copy Mermaid** for wikis or Markdown.
-- Optional **Edit mode** (off by default): add or remove agents from a queue straight from its card. See [What this tool changes](#what-this-tool-changes).
+- Optional **Edit mode** (off by default): add or remove agents, create queues, and add or delete rules in route-to-queue and classification rulesets, with preview, confirmation and undo. See [What this tool changes](#what-this-tool-changes).
 - Follows the ToolBox light and dark theme.
 - Available in English, Spanish, Portuguese, French, German and Italian. The language follows your system and can be changed in the sidebar. Values coming from Dataverse (option sets, lookups) use the language of the connected user.
 
@@ -36,19 +36,24 @@ By default, nothing: the map is read-only and only runs `GET` queries against th
 
 With **Edit mode** switched on (sidebar, off by default and only inside ToolBox), the tool can make exactly these changes:
 
-| Change | Dataverse operation |
-|---|---|
-| Add a user to a queue | Associate `queue` ↔ `systemuser` (`queuemembership_association`), the same as *Add users* in the Contact Center admin center |
-| Remove a user from a queue | Disassociate the same relationship |
+| Change | Dataverse operation | Undo |
+|---|---|---|
+| Add a user to a queue | Associate `queue` ↔ `systemuser` (`queuemembership_association`), the same as *Add users* in the Contact Center admin center | Removes the user again |
+| Remove a user from a queue | Disassociate the same relationship | Adds the user again |
+| Create an omnichannel queue | Create `queue` (name, type, assignment method, priority, operating hours). Type and assignment method only offer values already used by existing omnichannel queues | Deletes the new queue |
+| Add a rule to a **route-to-queue** or **classification** ruleset | Update `msdyn_decisionruleset.msdyn_rulesetdefinition`: the new `<rule>` is appended at the end; the rest of the definition is left untouched | Writes the previous definition back |
+| Delete a rule from those rulesets | Same update, removing that one `<rule>` | Writes the previous definition back |
+
+Overflow, assignment and system rulesets are never edited. Rule conditions can only use the variables of the ruleset's input contract (or attributes its rules already use) and operators already used in the environment. Before writing a ruleset, the tool reads it again and refuses to write if it changed since the map was loaded (for example in the admin center).
 
 Every change:
 
-- starts only from an explicit click on **+ Add agent** or **×** in the queue's *Agents* box;
-- shows a preview naming the user, the queue, the org and the environment type, with an extra warning for **Production** connections, and waits for confirmation;
+- starts only from an explicit click (**+ Add agent**, **×**, **+ New queue**, **+ Add rule**);
+- shows a preview naming what changes, the org and the environment type, with an extra warning for **Production** connections, and waits for confirmation;
 - can be reverted with **Undo** in the message shown right after it;
-- runs with the permissions of the ToolBox connection. Adding or removing queue members needs Append / Append To on *Queue* and *User* (for example the Omnichannel administrator role); if they are missing, the error from Dataverse is shown and nothing changes.
+- runs with the permissions of the ToolBox connection. Needed privileges: Append / Append To on *Queue* and *User* (agents), Create / Delete on *Queue* (queues), Write on *Decision rule set* (rules); for example the Omnichannel administrator role. If they are missing, the error from Dataverse is shown and nothing changes.
 
-No other records are created, updated or deleted.
+No other records are created, updated or deleted. Creating workstreams and new context variables is not supported yet.
 
 ## Privacy
 

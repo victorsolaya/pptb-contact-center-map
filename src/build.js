@@ -100,7 +100,8 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
         [F.actions]: actions.join('\n'),
         [F.orderBy]: r.orderBy.join(', '),
       })
-      Object.assign(nodes.get(ruleId), { rulesetId: rsId, ruleId: r.id })
+      const sets = r.set.filter(({ attr }) => attr && attr !== 'assign_to.queue' && !attr.startsWith('overflow'))
+      Object.assign(nodes.get(ruleId), { rulesetId: rsId, ruleId: r.id, sets: sets.map(({ attr, value }) => `${attr.replace(/^liveworkitemcontext\./, '')} = "${value}"`) })
       edge(rsId, ruleId, 'order', `#${i + 1}`)
       for (const { attr, value } of r.set) {
         if (attr === 'assign_to.queue') ruleTargets.push([ruleId, 'queue', value])

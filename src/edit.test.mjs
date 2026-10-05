@@ -60,6 +60,9 @@ assert.deepEqual(parsed[1].set, [{ attr: 'assign_to.queue', value: 'q-2' }])
 assert.ok(next.startsWith(base.slice(0, base.lastIndexOf('</rules>')).trimEnd()), 'existing XML untouched')
 assert.equal(removeRule(next, 'r-2'), base, 'remove restores the original byte for byte')
 assert.throws(() => removeRule(base, 'nope'))
+// definitions stored with CRLF: removing a rule leaves no stray \r
+const crlf = (s) => s.replace(/\n/g, '\r\n')
+assert.equal(removeRule(crlf(next), 'r-2'), crlf(base))
 // classification rule without conditions, into an empty ruleset
 const cls = appendRule('<decision hit-policy="first" version="1"><rules /></decision>', buildRuleXml({ id: 'c-1', name: 'Default', sets: [{ attr: 'liveworkitemcontext.tier', value: 'gold' }] }))
 assert.deepEqual(parseRules(cls).map((r) => [r.when, r.set[0].attr, r.set[0].value]), [['', 'liveworkitemcontext.tier', 'gold']])

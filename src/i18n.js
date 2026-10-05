@@ -40,6 +40,7 @@ const en = {
     confirmRule: (rs) => `This rule will be added at the end of "${rs}":`, confirmRemoveRule: (rs) => `This rule will be deleted from "${rs}":`,
     ruleAdded: (rs) => `Rule added to "${rs}"`, ruleRemoved: (rs) => `Rule deleted from "${rs}"`, removeRuleTitle: 'Delete a rule',
     stale: 'This ruleset was changed elsewhere after the map was loaded. Reload the tool and try again.', loadingContract: 'Reading the ruleset contract…', next: 'Next', required: 'Fill in the name and every value.',
+    contextVars: 'Context variables', otherAttrs: 'Other attributes', banner: (org, env) => `Edit mode · changes apply to ${org} (${env})`,
   },
 }
 
@@ -82,6 +83,7 @@ const es = {
     confirmRule: (rs) => `Se añadirá esta regla al final de «${rs}»:`, confirmRemoveRule: (rs) => `Se eliminará esta regla de «${rs}»:`,
     ruleAdded: (rs) => `Regla añadida a «${rs}»`, ruleRemoved: (rs) => `Regla eliminada de «${rs}»`, removeRuleTitle: 'Eliminar una regla',
     stale: 'Este conjunto de reglas se ha modificado en otro sitio después de cargar el mapa. Recarga la herramienta y vuelve a intentarlo.', loadingContract: 'Leyendo el contrato del conjunto de reglas…', next: 'Siguiente', required: 'Rellena el nombre y todos los valores.',
+    contextVars: 'Variables de contexto', otherAttrs: 'Otros atributos', banner: (org, env) => `Modo edición · los cambios se aplican en ${org} (${env})`,
   },
 }
 
@@ -124,6 +126,7 @@ const pt = {
     confirmRule: (rs) => `Esta regra será adicionada no final de "${rs}":`, confirmRemoveRule: (rs) => `Esta regra será excluída de "${rs}":`,
     ruleAdded: (rs) => `Regra adicionada a "${rs}"`, ruleRemoved: (rs) => `Regra excluída de "${rs}"`, removeRuleTitle: 'Excluir uma regra',
     stale: 'Este conjunto de regras foi alterado em outro lugar depois que o mapa foi carregado. Recarregue a ferramenta e tente novamente.', loadingContract: 'Lendo o contrato do conjunto de regras…', next: 'Avançar', required: 'Preencha o nome e todos os valores.',
+    contextVars: 'Variáveis de contexto', otherAttrs: 'Outros atributos', banner: (org, env) => `Modo de edição · as alterações se aplicam a ${org} (${env})`,
   },
 }
 
@@ -166,6 +169,7 @@ const fr = {
     confirmRule: (rs) => `Cette règle sera ajoutée à la fin de « ${rs} » :`, confirmRemoveRule: (rs) => `Cette règle sera supprimée de « ${rs} » :`,
     ruleAdded: (rs) => `Règle ajoutée à « ${rs} »`, ruleRemoved: (rs) => `Règle supprimée de « ${rs} »`, removeRuleTitle: 'Supprimer une règle',
     stale: 'Cet ensemble de règles a été modifié ailleurs après le chargement de la carte. Rechargez l’outil et réessayez.', loadingContract: 'Lecture du contrat de l’ensemble de règles…', next: 'Suivant', required: 'Renseignez le nom et toutes les valeurs.',
+    contextVars: 'Variables de contexte', otherAttrs: 'Autres attributs', banner: (org, env) => `Mode édition · les modifications s’appliquent à ${org} (${env})`,
   },
 }
 
@@ -208,6 +212,7 @@ const de = {
     confirmRule: (rs) => `Diese Regel wird am Ende von „${rs}“ hinzugefügt:`, confirmRemoveRule: (rs) => `Diese Regel wird aus „${rs}“ gelöscht:`,
     ruleAdded: (rs) => `Regel zu „${rs}“ hinzugefügt`, ruleRemoved: (rs) => `Regel aus „${rs}“ gelöscht`, removeRuleTitle: 'Regel löschen',
     stale: 'Dieser Regelsatz wurde nach dem Laden der Karte an anderer Stelle geändert. Lade das Tool neu und versuche es erneut.', loadingContract: 'Vertrag des Regelsatzes wird gelesen…', next: 'Weiter', required: 'Name und alle Werte ausfüllen.',
+    contextVars: 'Kontextvariablen', otherAttrs: 'Weitere Attribute', banner: (org, env) => `Bearbeitungsmodus · Änderungen gelten für ${org} (${env})`,
   },
 }
 
@@ -250,6 +255,7 @@ const it = {
     confirmRule: (rs) => `Questa regola verrà aggiunta in fondo a "${rs}":`, confirmRemoveRule: (rs) => `Questa regola verrà eliminata da "${rs}":`,
     ruleAdded: (rs) => `Regola aggiunta a "${rs}"`, ruleRemoved: (rs) => `Regola eliminata da "${rs}"`, removeRuleTitle: 'Elimina una regola',
     stale: 'Questo set di regole è stato modificato altrove dopo il caricamento della mappa. Ricarica lo strumento e riprova.', loadingContract: 'Lettura del contratto del set di regole…', next: 'Avanti', required: 'Compila il nome e tutti i valori.',
+    contextVars: 'Variabili di contesto', otherAttrs: 'Altri attributi', banner: (org, env) => `Modalità modifica · le modifiche si applicano a ${org} (${env})`,
   },
 }
 
