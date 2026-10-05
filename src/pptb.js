@@ -37,4 +37,7 @@ export async function saveFile(name, dataUrlOrText) {
   await toolboxAPI.fileSystem.saveFile(name, content)
 }
 
-export const copyText = (text) => (inPptb() ? toolboxAPI.utils.copyToClipboard(text) : navigator.clipboard.writeText(text))
+export const currentTheme = async () =>
+  inPptb() ? toolboxAPI.utils.getCurrentTheme() : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+
+export const copyText =(text) => (inPptb() ? toolboxAPI.utils.copyToClipboard(text) : navigator.clipboard.writeText(text))

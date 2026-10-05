@@ -1,30 +1,74 @@
+/* Colors follow the PPTB theme: <html data-theme="light|dark"> set from toolboxAPI.utils.getCurrentTheme().
+   Outside PPTB (npm run dev) the system preference decides. */
+:root {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --text: #0f172a;
+  --text-2: #334155;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --border-2: #cbd5e1;
+  --hover: #f1f5f9;
+  --selected: #e0e7ff;
+  --selected-2: #eef2ff;
+  --toolbar: #ffffffdd;
+  --warn: #b45309;
+  --focus: #fde047;
+  --lit: #93c5fd;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b1120;
+  --panel: #111827;
+  --text: #e5e7eb;
+  --text-2: #cbd5e1;
+  --muted: #94a3b8;
+  --border: #1f2937;
+  --border-2: #374151;
+  --hover: #1f2937;
+  --selected: #1e1b4b;
+  --selected-2: #1e1b4b;
+  --toolbar: #111827dd;
+  --warn: #fbbf24;
+  --focus: #ca8a04;
+  --lit: #3b82f6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #0b1120; --panel: #111827; --text: #e5e7eb; --text-2: #cbd5e1; --muted: #94a3b8; --border: #1f2937; --border-2: #374151;
+    --hover: #1f2937; --selected: #1e1b4b; --selected-2: #1e1b4b; --toolbar: #111827dd; --warn: #fbbf24; --focus: #ca8a04; --lit: #3b82f6;
+  }
+}
+
 * { box-sizing: border-box; }
-body { margin: 0; font: 13px/1.4 system-ui, 'Segoe UI', sans-serif; color: #0f172a; background: #f8fafc; }
-button { font: inherit; padding: 4px 10px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer; }
-button:hover { background: #f1f5f9; }
+body { margin: 0; font: 13px/1.4 system-ui, 'Segoe UI', sans-serif; color: var(--text); background: var(--bg); }
+button { font: inherit; color: var(--text); padding: 4px 10px; border: 1px solid var(--border-2); background: var(--panel); border-radius: 6px; cursor: pointer; }
+button:hover { background: var(--hover); }
 
 .app { display: flex; height: 100vh; }
-.side { width: 300px; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-right: 1px solid #e2e8f0; background: #fff; }
+.side { width: 300px; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-right: 1px solid var(--border); background: var(--panel); }
 .side h1 { font-size: 15px; margin: 0; }
-.side input[type=text], .side > input { padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+.side > input { padding: 6px 8px; border: 1px solid var(--border-2); border-radius: 6px; background: var(--panel); color: var(--text); }
 .types { display: flex; flex-direction: column; gap: 2px; }
 .types label { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 4px; cursor: pointer; }
-.types label.on { background: #eef2ff; font-weight: 600; }
-.list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; border-top: 1px solid #e2e8f0; }
+.types label.on { background: var(--selected-2); font-weight: 600; }
+.list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; border-top: 1px solid var(--border); }
 .list li { padding: 5px 4px; cursor: pointer; border-radius: 4px; }
-.list li:hover { background: #f1f5f9; }
-.list li.on { background: #e0e7ff; }
-.list li small { display: block; color: #64748b; margin-left: 14px; }
+.list li:hover { background: var(--hover); }
+.list li.on { background: var(--selected); }
+.list li small { display: block; color: var(--muted); margin-left: 14px; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; flex: none; }
 
 .main { flex: 1; position: relative; overflow: hidden; }
-.toolbar { position: absolute; z-index: 5; top: 8px; right: 8px; display: flex; gap: 6px; align-items: center; background: #fffd; padding: 4px 8px; border-radius: 8px; border: 1px solid #e2e8f0; }
-.empty { display: grid; place-items: center; height: 100%; color: #64748b; padding: 24px; text-align: center; }
+.toolbar { position: absolute; z-index: 5; top: 8px; right: 8px; display: flex; gap: 6px; align-items: center; background: var(--toolbar); padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border); }
+.empty { display: grid; place-items: center; height: 100%; color: var(--muted); padding: 24px; text-align: center; }
 
-.ccnode { box-sizing: border-box; width: 100%; min-height: 100%; background: #fff; border: 2px solid; border-radius: 8px; padding: 5px 8px 7px; }
-.ccnode.focus { box-shadow: 0 0 0 4px #fde047; }
+.ccnode { box-sizing: border-box; width: 100%; min-height: 100%; background: var(--panel); color: var(--text); border: 2px solid; border-radius: 8px; padding: 5px 8px 7px; }
+.ccnode.focus { box-shadow: 0 0 0 4px var(--focus); }
 .ccnode .lbl { font-weight: 600; line-height: 1.3; word-break: break-word; }
-.ccnode .sub { font-size: 11px; color: #64748b; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+.ccnode .sub { font-size: 11px; color: var(--muted); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
 .measure { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
 .measure > div { width: 260px; }
 
@@ -33,25 +77,25 @@ button:hover { background: #f1f5f9; }
 .sec-h { display: flex; justify-content: space-between; align-items: center; padding: 2px 3px 2px 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; cursor: pointer; }
 .sec-h .count { color: #fff; border-radius: 8px; padding: 0 6px; font-size: 10px; margin-left: 4px; }
 .top { display: flex; justify-content: space-between; align-items: center; }
-.min { width: 18px; height: 18px; padding: 0; line-height: 15px; font-size: 14px; font-weight: 700; color: #334155; border: 1px solid #94a3b8; border-radius: 4px; background: #fff; flex: none; }
-.min:hover { background: #e2e8f0; border-color: #334155; }
+.min { width: 18px; height: 18px; padding: 0; line-height: 15px; font-size: 14px; font-weight: 700; color: var(--text-2); border: 1px solid var(--muted); border-radius: 4px; background: var(--panel); flex: none; }
+.min:hover { background: var(--hover); border-color: var(--text-2); }
 
 /* click on a card: light up its tree, fade the rest */
 .react-flow__node.dim { opacity: .2; }
-.react-flow__node.lit .ccnode { box-shadow: 0 0 0 3px #93c5fd; }
-.sec .row { padding: 3px 6px; border-top: 1px dashed #e2e8f0; font-size: 11px; line-height: 1.35; word-break: break-word; cursor: pointer; }
-.sec .row:hover { background: #f8fafc; }
-.sec .cond { color: #334155; }
-.sec .act { color: #0f172a; font-weight: 600; }
+.react-flow__node.lit .ccnode { box-shadow: 0 0 0 3px var(--lit); }
+.sec .row { padding: 3px 6px; border-top: 1px dashed var(--border); font-size: 11px; line-height: 1.35; word-break: break-word; cursor: pointer; }
+.sec .row:hover { background: var(--hover); }
+.sec .cond { color: var(--text-2); }
+.sec .act { color: var(--text); font-weight: 600; }
 .kind { display: inline-block; color: #fff; font-size: 10px; padding: 0 6px; border-radius: 4px; }
 
-.detail { width: 340px; padding: 12px; border-left: 1px solid #e2e8f0; background: #fff; overflow: auto; position: relative; }
+.detail { width: 340px; padding: 12px; border-left: 1px solid var(--border); background: var(--panel); overflow: auto; position: relative; }
 .detail h2 { font-size: 15px; margin: 6px 0; word-break: break-word; }
 .detail .close { position: absolute; top: 8px; right: 8px; }
 .detail dl div { margin: 8px 0; }
-.detail dt { font-size: 11px; color: #64748b; }
+.detail dt { font-size: 11px; color: var(--muted); }
 .detail dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
-.warn { font-size: 11px; color: #b45309; }
+.warn { font-size: 11px; color: var(--warn); }
 .warn div { word-break: break-word; margin-top: 4px; }
 .side .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.side .head select { font: inherit; font-size: 12px; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; }
+.side .head select { font: inherit; font-size: 12px; padding: 2px 4px; border: 1px solid var(--border-2); border-radius: 6px; background: var(--panel); color: var(--text); }
