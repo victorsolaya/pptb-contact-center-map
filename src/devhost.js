@@ -7,9 +7,28 @@ const EXTRA_USERS = ['Olivia Brown', 'Noah Wilson', 'Emma Davis'].map((name, i) 
   systemuserid: `00000000-0000-4000-9000-00000000000${i + 1}`, fullname: name, internalemailaddress: name.toLowerCase().replace(' ', '.') + '@contoso.com', isdisabled: false,
 }))
 
+const FV = '@OData.Community.Display.V1.FormattedValue'
+// raw snapshot key per table, and the lookups the fake metadata exposes
+const TABLES = {
+  queue: 'queues', msdyn_liveworkstream: 'workstreams', msdyn_decisioncontract: 'contracts', msdyn_decisionruleset: 'rulesets',
+  msdyn_ocliveworkstreamcontextvariable: 'contextVariables', msdyn_liveworkstreamcapacityprofile: 'workstreamCapacity',
+  msdyn_routingconfiguration: 'routingConfigs', msdyn_routingconfigurationstep: 'routingSteps',
+}
+const LOOKUPS = {
+  queue: [['msdyn_operatinghourid', 'msdyn_operatinghour']],
+  msdyn_liveworkstream: [['msdyn_routingcontractid', 'msdyn_decisioncontract'], ['msdyn_defaultqueue', 'queue'], ['msdyn_outboundqueueid', 'queue'], ['msdyn_sessiontemplate_default', 'msdyn_sessiontemplate']],
+  msdyn_ocliveworkstreamcontextvariable: [['msdyn_liveworkstreamid', 'msdyn_liveworkstream']],
+  msdyn_liveworkstreamcapacityprofile: [['msdyn_workstream_id', 'msdyn_liveworkstream'], ['msdyn_capacityprofile_id', 'msdyn_capacityprofile']],
+  msdyn_decisionruleset: [['msdyn_inputcontractid', 'msdyn_decisioncontract'], ['msdyn_outputcontractid', 'msdyn_decisioncontract']],
+  msdyn_routingconfiguration: [['msdyn_liveworkstreamid', 'msdyn_liveworkstream']],
+  msdyn_routingconfigurationstep: [['msdyn_routingconfigurationid', 'msdyn_routingconfiguration'], ['msdyn_rulesetid', 'msdyn_decisionruleset']],
+}
+const idField = (entity) => ({ msdyn_ocliveworkstreamcontextvariable: 'msdyn_ocliveworkstreamcontextvariableid' })[entity] ?? `${entity}id`
+
 export async function installFakeHost() {
   const snap = await (await fetch('dev/raw.json')).json()
   const raw = structuredClone(snap.raw)
+  const table = (entity) => (raw[TABLES[entity]] ??= [])
   const allUsers = [...raw.users, ...EXTRA_USERS]
   const syncUsers = () => { raw.users = allUsers.filter((u) => raw.memberships.some((m) => m.systemuserid === u.systemuserid)) }
   const env = new URLSearchParams(location.search).get('env') ?? snap.environment ?? 'Dev'
@@ -31,6 +50,10 @@ export async function installFakeHost() {
         const text = decodeURIComponent(search[1]).replace(/''/g, "'").toLowerCase()
         return { value: allUsers.filter((u) => u.fullname.toLowerCase().includes(text) || u.internalemailaddress.includes(text)) }
       }
+      const rel = /EntityDefinitions\(LogicalName='(\w+)'\)\/ManyToOneRelationships/.exec(q)
+      if (rel) return { value: (LOOKUPS[rel[1]] ?? []).map(([attr, target]) => ({ ReferencingAttribute: attr, ReferencingEntityNavigationPropertyName: attr, ReferencedEntity: target })) }
+      const set = /EntityDefinitions\(LogicalName='(\w+)'\)\?\$select=EntitySetName/.exec(q)
+      if (set) return { EntitySetName: set[1] + 's' }
       const key = Object.keys(QUERIES).find((k) => QUERIES[k] === q)
       return { value: structuredClone(raw[key] ?? []) }
     },
@@ -44,25 +67,37 @@ export async function installFakeHost() {
       syncUsers()
     },
     retrieve: async (entity, id) => {
-      if (entity === 'msdyn_decisionruleset') return { msdyn_rulesetdefinition: raw.rulesets.find((r) => r.msdyn_decisionrulesetid === id)?.msdyn_rulesetdefinition }
-      if (entity === 'msdyn_decisioncontract') return { msdyn_contractdefinition: raw.contracts.find((c) => c.msdyn_decisioncontractid === id)?.msdyn_contractdefinition }
-      throw new Error(`fake host: retrieve ${entity} not simulated`)
+      const row = table(entity).find((r) => r[idField(entity)] === id)
+      if (!row) throw new Error(`fake host: ${entity} ${id} not found`)
+      return structuredClone(row)
     },
     update: async (entity, id, record) => {
-      if (entity !== 'msdyn_decisionruleset') throw new Error(`fake host: update ${entity} not simulated`)
       if (location.search.includes('stale')) throw new Error('simulated concurrent edit')
-      Object.assign(raw.rulesets.find((r) => r.msdyn_decisionrulesetid === id), record)
+      Object.assign(table(entity).find((r) => r[idField(entity)] === id), record)
     },
     create: async (entity, record) => {
-      if (entity !== 'queue') throw new Error(`fake host: create ${entity} not simulated`)
-      const like = raw.queues.find((q) => q.msdyn_queuetype === record.msdyn_queuetype) ?? {}
-      const queueid = crypto.randomUUID()
-      raw.queues.push({ ...like, ...record, queueid, _msdyn_prequeueoverflowrulesetid_value: null, _msdyn_inqueueoverflowrulesetid_value: null, _msdyn_operatinghourid_value: record['msdyn_operatinghourid@odata.bind']?.match(/\((.+)\)/)?.[1] ?? null })
-      return { id: queueid }
+      if (location.search.includes('failws') && entity === 'msdyn_routingconfiguration') throw new Error('403 missing prvCreatemsdyn_routingconfiguration (simulated)')
+      const id = crypto.randomUUID()
+      const rows = table(entity)
+      const row = { [idField(entity)]: id }
+      for (const [key, value] of Object.entries(record)) {
+        const lookup = /^(\w+)@odata\.bind$/.exec(key)
+        if (lookup) row[`_${lookup[1]}_value`] = /\(([^)]+)\)/.exec(value)[1]
+        else {
+          row[key] = value
+          // reuse Dataverse's label for the same option value from an existing row
+          const label = rows.find((r) => r[key] === value && r[key + FV])?.[key + FV]
+          if (label) row[key + FV] = label
+        }
+      }
+      if (entity === 'queue') Object.assign(row, { _msdyn_prequeueoverflowrulesetid_value: null, _msdyn_inqueueoverflowrulesetid_value: null })
+      rows.push(row)
+      if (entity === 'msdyn_liveworkstream') row.statecode = 0
+      return { id }
     },
     delete: async (entity, id) => {
-      if (entity !== 'queue') throw new Error(`fake host: delete ${entity} not simulated`)
-      raw.queues = raw.queues.filter((q) => q.queueid !== id)
+      const key = TABLES[entity]
+      raw[key] = table(entity).filter((r) => r[idField(entity)] !== id)
     },
   }
 }

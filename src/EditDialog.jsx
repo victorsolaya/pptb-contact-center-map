@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { searchUsers, readContract, contractVariables, newId } from './edit.js'
 import { parseRules, simplify } from './rules.js'
+import { templates, planWorkstream, formatted } from './workstream.js'
 
 // Every dialog previews the change and names the org and the environment before applying it
 // (PPTB marketplace policy for tools that modify data); Production gets an extra warning.
 
-const TONE = { add: '#16a34a', remove: '#dc2626', queue: '#f59e0b', rule: '#d946ef' }
-const ICON = { add: '+', remove: '×', queue: '▤', rule: '◆' }
+const TONE = { add: '#16a34a', remove: '#dc2626', queue: '#f59e0b', rule: '#d946ef', workstream: '#6366f1' }
+const ICON = { add: '+', remove: '×', queue: '▤', rule: '◆', workstream: '⇄' }
 
 function Modal({ tone, title, subtitle, footer, onClose, children }) {
   return (
@@ -335,6 +336,69 @@ export function RemoveRuleDialog({ rule, ruleset, org, env, busy, error, onApply
         <small>{rule.sub === t.text.always ? t.text.alwaysCap : t.text.when(rule.sub)}</small>
         <span className="then">{rule.data?.[t.fields.actions]}</span>
       </div>
+      <Target org={org} env={env} error={error} t={t} />
+    </Modal>
+  )
+}
+
+// ---------------------------------------------------------------- new workstream
+
+// Clones a template workstream (same channel). The preview lists the records from the same plan
+// that `createWorkstream` executes, so what is shown is exactly what gets created.
+export function WorkstreamDialog({ raw, org, env, busy, error, onApply, onBack, onClose, t }) {
+  const options = templates(raw)
+  const [form, setForm] = useState({ name: '', templateId: options[0]?.msdyn_liveworkstreamid ?? '', copyRules: true })
+  const [step, setStep] = useState('form')
+  const plan = form.templateId ? planWorkstream(raw, form.templateId, { copyRules: form.copyRules }) : null
+  const channel = (w) => formatted(w, 'msdyn_streamsource')
+  const valid = form.name.trim() && plan
+  const close = () => !busy && onClose()
+
+  if (!options.length)
+    return (
+      <Modal tone="workstream" title={t.edit.wsTitle} onClose={close} footer={<button onClick={onClose}>{t.edit.cancel}</button>}>
+        <p className="muted">{t.edit.noTemplates}</p>
+      </Modal>
+    )
+  if (step === 'form')
+    return (
+      <Modal tone="workstream" title={t.edit.wsTitle} onClose={close}
+        footer={<>
+          <button onClick={onClose}>{t.edit.cancel}</button>
+          <button className="primary" disabled={!valid} onClick={() => setStep('confirm')}>{t.edit.next}</button>
+        </>}>
+        <label className="field">{t.edit.name}<input autoFocus value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} /></label>
+        <label className="field">{t.edit.template}
+          <select value={form.templateId} onChange={(e) => setForm((f) => ({ ...f, templateId: e.target.value }))}>
+            {options.map((w) => <option key={w.msdyn_liveworkstreamid} value={w.msdyn_liveworkstreamid}>{w.msdyn_name} ({channel(w)})</option>)}
+          </select>
+        </label>
+        {plan?.route && (
+          <label className="check">
+            <input type="checkbox" checked={form.copyRules} onChange={(e) => setForm((f) => ({ ...f, copyRules: e.target.checked }))} /> {t.edit.copyRules}
+          </label>
+        )}
+        <p className="muted small">{t.edit.wsNotes}</p>
+      </Modal>
+    )
+  const names = plan.variables.map((v) => v.msdyn_name).join(', ')
+  return (
+    <Modal tone="workstream" title={t.edit.wsTitle} subtitle={form.name.trim()} onClose={close}
+      footer={<>
+        <button disabled={busy} onClick={() => { onBack(); setStep('form') }}>{t.edit.back}</button>
+        <button disabled={busy} onClick={onClose}>{t.edit.cancel}</button>
+        <button className="primary" disabled={busy} onClick={() => onApply(form.name.trim(), plan)}>{busy ? t.edit.working : t.edit.add}</button>
+      </>}>
+      <p className="preview">{t.edit.confirmWs(form.name.trim())}</p>
+      <ol className="records">
+        <li>{t.edit.recWorkstream(channel(plan.template))}</li>
+        <li>{t.edit.recContract(plan.variables.length)}</li>
+        {plan.variables.length > 0 && <li>{t.edit.recVariables(names)}</li>}
+        {plan.capacity.length > 0 && <li>{t.edit.recCapacity(plan.capacity.length)}</li>}
+        {plan.route && <li>{t.edit.recRouting(plan.route.rules)}</li>}
+      </ol>
+      {plan.skippedSteps > 0 && <p className="muted small">{t.edit.recSkipped}</p>}
+      <p className="muted small">{t.edit.wsNotes}</p>
       <Target org={org} env={env} error={error} t={t} />
     </Modal>
   )

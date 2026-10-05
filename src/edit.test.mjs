@@ -3,7 +3,12 @@ import assert from 'node:assert/strict'
 const calls = []
 globalThis.toolboxAPI = { connections: { getActiveConnection: async () => ({ name: 'CRM PRE', url: 'https://x.crm4.dynamics.com', environment: 'UAT' }) } }
 globalThis.dataverseAPI = {
-  queryData: async (q) => (calls.push(['query', q]), { value: [{ systemuserid: 'u1', fullname: "Ana O'Neil", internalemailaddress: 'ana@x.com' }] }),
+  queryData: async (q) => {
+    if (q.includes('ManyToOneRelationships')) return { value: [{ ReferencingAttribute: 'msdyn_operatinghourid', ReferencingEntityNavigationPropertyName: 'msdyn_operatinghourid', ReferencedEntity: 'msdyn_operatinghour' }] }
+    if (q.includes('EntitySetName')) return { EntitySetName: 'msdyn_operatinghours' }
+    calls.push(['query', q])
+    return { value: [{ systemuserid: 'u1', fullname: "Ana O'Neil", internalemailaddress: 'ana@x.com' }] }
+  },
   associate: async (...a) => calls.push(['associate', ...a]),
   disassociate: async (...a) => calls.push(['disassociate', ...a]),
 }

@@ -1,6 +1,6 @@
 // Write operations, one atomic and reversible Dataverse call each. They go through the PPTB host
 // (dataverseAPI), so they run with the connection's own permissions.
-import { fetchQuery } from './pptb.js'
+import { fetchQuery, bind } from './pptb.js'
 import { parseXml } from './rules.js'
 
 const guid = (nodeId) => nodeId.split(':')[1]
@@ -29,7 +29,7 @@ export const removeMember = (queueId, userId) => dataverseAPI.disassociate('queu
 // messaging/voice omnichannel queue. Option values come from queues that already exist in the org.
 export async function createQueue({ name, type, strategy, priority, hoursId }) {
   const record = { name: name.trim(), msdyn_isomnichannelqueue: true, queueviewtype: 1, msdyn_queuetype: type, msdyn_assignmentstrategy: strategy, msdyn_priority: priority }
-  if (hoursId) record['msdyn_operatinghourid@odata.bind'] = `/msdyn_operatinghours(${hoursId})`
+  if (hoursId) Object.assign(record, await bind('queue', 'msdyn_operatinghourid', hoursId))
   const { id } = await dataverseAPI.create('queue', record)
   return id
 }

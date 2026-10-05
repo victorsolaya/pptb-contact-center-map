@@ -2,6 +2,7 @@
 // the tool never sees credentials, it only calls window.dataverseAPI. queryData already asks for
 // FormattedValue annotations and returns @odata.nextLink, which we follow for >5000-row tables.
 import { QUERIES } from './queries.js'
+import { normGuid } from './rules.js'
 
 export const inPptb = () => Boolean(globalThis.toolboxAPI && globalThis.dataverseAPI)
 
@@ -26,6 +27,29 @@ export async function loadFromPptb(keys = Object.keys(QUERIES)) {
   const raw = {}
   await Promise.all(keys.map(async (key) => { raw[key] = await fetchQuery(QUERIES[key]) }))
   return { org: conn.name || new URL(conn.url).hostname, environment: conn.environment, extractedAt: new Date().toISOString(), raw }
+}
+
+// ---------------------------------------------------------------- lookups from this org's metadata
+
+const navCache = new Map()
+const setCache = new Map()
+export async function relationships(entity) {
+  if (!navCache.has(entity)) {
+    const rels = await fetchQuery(`EntityDefinitions(LogicalName='${entity}')/ManyToOneRelationships?$select=ReferencingAttribute,ReferencingEntityNavigationPropertyName,ReferencedEntity`)
+    if (rels.error) throw new Error(rels.error)
+    navCache.set(entity, rels)
+  }
+  return navCache.get(entity)
+}
+async function entitySet(entity) {
+  if (!setCache.has(entity)) setCache.set(entity, (await dataverseAPI.queryData(`EntityDefinitions(LogicalName='${entity}')?$select=EntitySetName`)).EntitySetName)
+  return setCache.get(entity)
+}
+// `{ "<navigation property>@odata.bind": "/<entity set>(<id>)" }` for a lookup column
+export async function bind(entity, attribute, id) {
+  const rel = (await relationships(entity)).find((r) => r.ReferencingAttribute === attribute)
+  if (!rel) throw new Error(`${entity}.${attribute} is not a lookup in this environment`)
+  return { [`${rel.ReferencingEntityNavigationPropertyName}@odata.bind`]: `/${await entitySet(rel.ReferencedEntity)}(${normGuid(id)})` }
 }
 
 // ToolBox notification; outside ToolBox (dev) nothing is logged: the text can contain user names.

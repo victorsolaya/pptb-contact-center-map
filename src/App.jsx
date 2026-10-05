@@ -6,7 +6,8 @@ import { TYPES, SECTIONS, neighborhood, toMermaid, foldIntoQueues } from './grap
 import { buildGraph } from './build.js'
 import { inPptb, loadFromPptb, saveFile, copyText, currentTheme, notify } from './pptb.js'
 import { addMember, removeMember, createQueue, deleteQueue, appendRule, removeRule, buildRuleXml, writeRuleset, MEMBER_TABLES, QUEUE_TABLES, RULE_TABLES } from './edit.js'
-import { EditDialog, Toast, QueueDialog, RuleDialog, RemoveRuleDialog } from './EditDialog.jsx'
+import { EditDialog, Toast, QueueDialog, RuleDialog, RemoveRuleDialog, WorkstreamDialog } from './EditDialog.jsx'
+import { createWorkstream, deleteCreated, WORKSTREAM_TABLES } from './workstream.js'
 import { normGuid } from './rules.js'
 import { LANGS, initialLang, saveLang } from './i18n.js'
 
@@ -287,7 +288,15 @@ export default function App() {
     const part = await loadFromPptb(keys)
     if (part) setSnap((s) => s && { ...s, raw: { ...s.raw, ...part.raw } }) // s is undefined if the connection changed meanwhile
   }
-  const errText = (e) => ({ stale: t.edit.stale, badDefinition: t.edit.badDefinition, ruleNotFound: t.edit.ruleNotFound })[e?.code] ?? String(e?.message ?? e)
+  const errText = (e) => {
+    const known = { stale: t.edit.stale, badDefinition: t.edit.badDefinition, ruleNotFound: t.edit.ruleNotFound }[e?.code]
+    if (known) return known
+    const message = String(e?.message ?? e)
+    // multi-record creates clean up after themselves; say whether that worked
+    if (e?.code === 'rolledBack') return `${message}. ${t.edit.rolledBack}`
+    if (e?.code === 'partial') return `${message}. ${t.edit.partial(e.leftovers.map((r) => `${r.entity} ${r.id}`).join(', '))}`
+    return message
+  }
   // `change` applies one change and returns the function that reverts it (offered as Undo).
   async function perform(change, text) {
     setBusy(true)
@@ -340,6 +349,17 @@ export default function App() {
     .filter((n) => n.type === 'queue' && !n.missing)
     .map((n) => ({ id: n.id.split(':')[1], label: n.label }))
     .sort((a, b) => a.label.localeCompare(b.label))
+  const applyWorkstream = (name, plan) =>
+    perform(async () => {
+      const { workstreamId, created } = await createWorkstream(name, plan)
+      await refreshTables(WORKSTREAM_TABLES)
+      focus(`workstream:${normGuid(workstreamId)}`)
+      return async () => {
+        const leftovers = await deleteCreated(created)
+        await refreshTables(WORKSTREAM_TABLES)
+        if (leftovers.length) throw Object.assign(new Error(t.edit.failed), { code: 'partial', leftovers })
+      }
+    }, t.edit.wsCreated(name))
   const openDialog = (d) => { setEditError(null); setDialog(d) }
   async function undo() {
     setBusy(true)
@@ -372,7 +392,19 @@ export default function App() {
                 <input type="checkbox" checked={edit} onChange={(e) => setEdit(e.target.checked)} /> {t.edit.mode}
               </label>
             )}
-            {edit && <button className="newq" onClick={() => openDialog({ kind: 'queue' })}>{t.edit.newQueue}</button>}
+          </div>
+        )}
+        {edit && (
+          <div className="create-panel">
+            <span className="create-title">{t.edit.createTitle}</span>
+            <div className="create-grid">
+              <button className="create-tile queue newq" title={t.edit.queueTitle} onClick={() => openDialog({ kind: 'queue' })}>
+                <span className="tile-icon" aria-hidden>▤</span>{t.types.queue}
+              </button>
+              <button className="create-tile workstream newws" title={t.edit.wsTitle} onClick={() => openDialog({ kind: 'workstream' })}>
+                <span className="tile-icon" aria-hidden>⇄</span>{t.types.workstream}
+              </button>
+            </div>
           </div>
         )}
         {graph.meta.warnings.length > 0 && (
@@ -432,6 +464,9 @@ export default function App() {
       )}
       {(dialog?.kind === 'add' || dialog?.kind === 'confirm') && (
         <EditDialog dialog={dialog} setDialog={(d) => { setEditError(null); setDialog(d) }} apply={applyMember} busy={busy} error={editError} org={snap.org} env={snap.environment} t={t} />
+      )}
+      {dialog?.kind === 'workstream' && (
+        <WorkstreamDialog raw={snap.raw} org={snap.org} env={snap.environment} busy={busy} error={editError} onApply={applyWorkstream} onBack={() => setEditError(null)} onClose={() => setDialog(null)} t={t} />
       )}
       {dialog?.kind === 'queue' && (
         <QueueDialog raw={snap.raw} org={snap.org} env={snap.environment} busy={busy} error={editError} onApply={applyQueue} onBack={() => setEditError(null)} onClose={() => setDialog(null)} t={t} />
