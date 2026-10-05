@@ -28,7 +28,8 @@ export async function loadFromPptb(keys = Object.keys(QUERIES)) {
   return { org: conn.name || new URL(conn.url).hostname, environment: conn.environment, extractedAt: new Date().toISOString(), raw }
 }
 
-export const notify = (title, body, type) => (inPptb() ? toolboxAPI.utils.showNotification({ title, body, type }) : console.log(type, title, body))
+// ToolBox notification; outside ToolBox (dev) nothing is logged: the text can contain user names.
+export const notify = (title, body, type) => inPptb() && toolboxAPI.utils.showNotification({ title, body, type })
 
 // Files and clipboard go through the host: a sandboxed tool iframe can't trigger downloads.
 export async function saveFile(name, dataUrlOrText) {

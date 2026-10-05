@@ -14,6 +14,7 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 - Every box inside a queue card (operating hours, PreQueue, InQueue, agents) can be minimized with its **−/+** button, or all at once from the toolbar.
 - One click on a card highlights its incoming path and everything below it; click the background to clear.
 - **Export PNG** for documents and **Copy Mermaid** for wikis or Markdown.
+- Optional **Edit mode** (off by default): add or remove agents from a queue straight from its card. See [What this tool changes](#what-this-tool-changes).
 - Follows the ToolBox light and dark theme.
 - Available in English, Spanish, Portuguese, French, German and Italian. The language follows your system and can be changed in the sidebar. Values coming from Dataverse (option sets, lookups) use the language of the connected user.
 
@@ -31,7 +32,23 @@ If a table cannot be read, the map is still drawn and the sidebar lists which ta
 
 ## What this tool changes
 
-Nothing. Contact Center Map is read-only: it only runs `GET` queries against the Dataverse Web API and never creates, updates or deletes records.
+By default, nothing: the map is read-only and only runs `GET` queries against the Dataverse Web API.
+
+With **Edit mode** switched on (sidebar, off by default and only inside ToolBox), the tool can make exactly these changes:
+
+| Change | Dataverse operation |
+|---|---|
+| Add a user to a queue | Associate `queue` ↔ `systemuser` (`queuemembership_association`), the same as *Add users* in the Contact Center admin center |
+| Remove a user from a queue | Disassociate the same relationship |
+
+Every change:
+
+- starts only from an explicit click on **+ Add agent** or **×** in the queue's *Agents* box;
+- shows a preview naming the user, the queue, the org and the environment type, with an extra warning for **Production** connections, and waits for confirmation;
+- can be reverted with **Undo** in the message shown right after it;
+- runs with the permissions of the ToolBox connection. Adding or removing queue members needs Append / Append To on *Queue* and *User* (for example the Omnichannel administrator role); if they are missing, the error from Dataverse is shown and nothing changes.
+
+No other records are created, updated or deleted.
 
 ## Privacy
 

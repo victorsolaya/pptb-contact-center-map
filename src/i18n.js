@@ -24,6 +24,15 @@ const en = {
     noConnection: 'Pick or create a connection in Power Platform ToolBox and the tool will load automatically.',
     noData: 'No data. Open this tool from Power Platform ToolBox with a connected environment.', language: 'Language',
   },
+  edit: {
+    mode: 'Edit mode', env: 'Environment', addAgent: '+ Add agent', remove: 'Remove from queue',
+    searchUsers: 'Search users by name or email…', searching: 'Searching…', noResults: 'No users found', alreadyMember: 'already in this queue',
+    addTitle: (q) => `Add an agent to "${q}"`, removeTitle: 'Remove an agent',
+    confirmAdd: (u, q) => `${u} will be added to the queue "${q}".`, confirmRemove: (u, q) => `${u} will be removed from the queue "${q}".`,
+    target: (org, env) => `Environment: ${org} (${env})`, production: 'This is a PRODUCTION environment. The change applies immediately.',
+    add: 'Add', removeBtn: 'Remove', cancel: 'Cancel', back: 'Back', undo: 'Undo', working: 'Applying…',
+    added: (u, q) => `${u} added to "${q}"`, removed: (u, q) => `${u} removed from "${q}"`, failed: 'The change could not be applied',
+  },
 }
 
 const es = {
@@ -48,6 +57,15 @@ const es = {
     centerHere: 'Centrar diagrama aquí', minimize: (x) => `Minimizar ${x}`, expand: (x) => `Expandir ${x}`, allBoxes: 'todas las cajas', diagram: 'diagrama',
     noConnection: 'Elige o crea una conexión en Power Platform ToolBox y la herramienta se cargará sola.',
     noData: 'Sin datos. Abre esta herramienta desde Power Platform ToolBox con un entorno conectado.', language: 'Idioma',
+  },
+  edit: {
+    mode: 'Modo edición', env: 'Entorno', addAgent: '+ Añadir agente', remove: 'Quitar de la cola',
+    searchUsers: 'Buscar usuarios por nombre o email…', searching: 'Buscando…', noResults: 'No se encontraron usuarios', alreadyMember: 'ya está en esta cola',
+    addTitle: (q) => `Añadir un agente a «${q}»`, removeTitle: 'Quitar un agente',
+    confirmAdd: (u, q) => `Se añadirá a ${u} a la cola «${q}».`, confirmRemove: (u, q) => `Se quitará a ${u} de la cola «${q}».`,
+    target: (org, env) => `Entorno: ${org} (${env})`, production: 'Es un entorno de PRODUCCIÓN. El cambio se aplica al momento.',
+    add: 'Añadir', removeBtn: 'Quitar', cancel: 'Cancelar', back: 'Atrás', undo: 'Deshacer', working: 'Aplicando…',
+    added: (u, q) => `${u} añadido a «${q}»`, removed: (u, q) => `${u} quitado de «${q}»`, failed: 'No se pudo aplicar el cambio',
   },
 }
 
@@ -74,6 +92,15 @@ const pt = {
     noConnection: 'Escolha ou crie uma conexão no Power Platform ToolBox e a ferramenta será carregada automaticamente.',
     noData: 'Sem dados. Abra esta ferramenta no Power Platform ToolBox com um ambiente conectado.', language: 'Idioma',
   },
+  edit: {
+    mode: 'Modo de edição', env: 'Ambiente', addAgent: '+ Adicionar agente', remove: 'Remover da fila',
+    searchUsers: 'Pesquisar usuários por nome ou email…', searching: 'Pesquisando…', noResults: 'Nenhum usuário encontrado', alreadyMember: 'já está nesta fila',
+    addTitle: (q) => `Adicionar um agente a "${q}"`, removeTitle: 'Remover um agente',
+    confirmAdd: (u, q) => `${u} será adicionado à fila "${q}".`, confirmRemove: (u, q) => `${u} será removido da fila "${q}".`,
+    target: (org, env) => `Ambiente: ${org} (${env})`, production: 'Este é um ambiente de PRODUÇÃO. A alteração é aplicada imediatamente.',
+    add: 'Adicionar', removeBtn: 'Remover', cancel: 'Cancelar', back: 'Voltar', undo: 'Desfazer', working: 'Aplicando…',
+    added: (u, q) => `${u} adicionado a "${q}"`, removed: (u, q) => `${u} removido de "${q}"`, failed: 'Não foi possível aplicar a alteração',
+  },
 }
 
 const fr = {
@@ -98,6 +125,15 @@ const fr = {
     centerHere: 'Centrer le diagramme ici', minimize: (x) => `Réduire ${x}`, expand: (x) => `Développer ${x}`, allBoxes: 'toutes les boîtes', diagram: 'diagramme',
     noConnection: 'Choisissez ou créez une connexion dans Power Platform ToolBox et l’outil se chargera automatiquement.',
     noData: 'Aucune donnée. Ouvrez cet outil depuis Power Platform ToolBox avec un environnement connecté.', language: 'Langue',
+  },
+  edit: {
+    mode: 'Mode édition', env: 'Environnement', addAgent: '+ Ajouter un agent', remove: 'Retirer de la file',
+    searchUsers: 'Rechercher des utilisateurs par nom ou e-mail…', searching: 'Recherche…', noResults: 'Aucun utilisateur trouvé', alreadyMember: 'déjà dans cette file',
+    addTitle: (q) => `Ajouter un agent à « ${q} »`, removeTitle: 'Retirer un agent',
+    confirmAdd: (u, q) => `${u} sera ajouté à la file « ${q} ».`, confirmRemove: (u, q) => `${u} sera retiré de la file « ${q} ».`,
+    target: (org, env) => `Environnement : ${org} (${env})`, production: 'Ceci est un environnement de PRODUCTION. La modification s’applique immédiatement.',
+    add: 'Ajouter', removeBtn: 'Retirer', cancel: 'Annuler', back: 'Retour', undo: 'Annuler la modification', working: 'Application…',
+    added: (u, q) => `${u} ajouté à « ${q} »`, removed: (u, q) => `${u} retiré de « ${q} »`, failed: 'La modification n’a pas pu être appliquée',
   },
 }
 
@@ -124,6 +160,15 @@ const de = {
     noConnection: 'Wähle oder erstelle eine Verbindung in Power Platform ToolBox, dann lädt das Tool automatisch.',
     noData: 'Keine Daten. Öffne dieses Tool aus Power Platform ToolBox mit einer verbundenen Umgebung.', language: 'Sprache',
   },
+  edit: {
+    mode: 'Bearbeitungsmodus', env: 'Umgebung', addAgent: '+ Agent hinzufügen', remove: 'Aus Warteschlange entfernen',
+    searchUsers: 'Benutzer nach Name oder E-Mail suchen…', searching: 'Suche…', noResults: 'Keine Benutzer gefunden', alreadyMember: 'bereits in dieser Warteschlange',
+    addTitle: (q) => `Agent zu „${q}“ hinzufügen`, removeTitle: 'Agent entfernen',
+    confirmAdd: (u, q) => `${u} wird zur Warteschlange „${q}“ hinzugefügt.`, confirmRemove: (u, q) => `${u} wird aus der Warteschlange „${q}“ entfernt.`,
+    target: (org, env) => `Umgebung: ${org} (${env})`, production: 'Dies ist eine PRODUKTIONSUMGEBUNG. Die Änderung wird sofort wirksam.',
+    add: 'Hinzufügen', removeBtn: 'Entfernen', cancel: 'Abbrechen', back: 'Zurück', undo: 'Rückgängig', working: 'Wird angewendet…',
+    added: (u, q) => `${u} zu „${q}“ hinzugefügt`, removed: (u, q) => `${u} aus „${q}“ entfernt`, failed: 'Die Änderung konnte nicht angewendet werden',
+  },
 }
 
 const it = {
@@ -148,6 +193,15 @@ const it = {
     centerHere: 'Centra il diagramma qui', minimize: (x) => `Riduci ${x}`, expand: (x) => `Espandi ${x}`, allBoxes: 'tutte le caselle', diagram: 'diagramma',
     noConnection: 'Scegli o crea una connessione in Power Platform ToolBox e lo strumento si caricherà automaticamente.',
     noData: 'Nessun dato. Apri questo strumento da Power Platform ToolBox con un ambiente connesso.', language: 'Lingua',
+  },
+  edit: {
+    mode: 'Modalità modifica', env: 'Ambiente', addAgent: '+ Aggiungi agente', remove: 'Rimuovi dalla coda',
+    searchUsers: 'Cerca utenti per nome o email…', searching: 'Ricerca…', noResults: 'Nessun utente trovato', alreadyMember: 'già in questa coda',
+    addTitle: (q) => `Aggiungi un agente a "${q}"`, removeTitle: 'Rimuovi un agente',
+    confirmAdd: (u, q) => `${u} verrà aggiunto alla coda "${q}".`, confirmRemove: (u, q) => `${u} verrà rimosso dalla coda "${q}".`,
+    target: (org, env) => `Ambiente: ${org} (${env})`, production: 'Questo è un ambiente di PRODUZIONE. La modifica viene applicata subito.',
+    add: 'Aggiungi', removeBtn: 'Rimuovi', cancel: 'Annulla', back: 'Indietro', undo: 'Annulla modifica', working: 'Applicazione…',
+    added: (u, q) => `${u} aggiunto a "${q}"`, removed: (u, q) => `${u} rimosso da "${q}"`, failed: 'Impossibile applicare la modifica',
   },
 }
 

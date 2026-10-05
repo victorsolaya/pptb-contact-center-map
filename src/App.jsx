@@ -4,7 +4,9 @@ import ELK from 'elkjs/lib/elk.bundled.js'
 import { toPng } from 'html-to-image'
 import { TYPES, SECTIONS, neighborhood, toMermaid, foldIntoQueues } from './graph.js'
 import { buildGraph } from './build.js'
-import { inPptb, loadFromPptb, saveFile, copyText, currentTheme } from './pptb.js'
+import { inPptb, loadFromPptb, saveFile, copyText, currentTheme, notify } from './pptb.js'
+import { addMember, removeMember, MEMBER_TABLES } from './edit.js'
+import { EditDialog, Toast } from './EditDialog.jsx'
 import { LANGS, initialLang, saveLang } from './i18n.js'
 
 // Power Platform ToolBox: the host's active connection. `npm run dev`: dev/raw.json (gitignored,
@@ -31,7 +33,7 @@ const MinButton = ({ open, onClick, title, t }) => (
 function NodeBody({ data }) {
   const { t } = data
   const color = TYPES[data.type]?.color ?? '#999'
-  const secs = SECTIONS.filter(([k]) => data[k])
+  const secs = SECTIONS.filter(([k]) => Array.isArray(data[k]))
   const anyOpen = secs.some(([k]) => data.isOpen(k))
   return (
     <div className={'ccnode' + (data.focus ? ' focus' : '')} style={{ borderColor: color }}>
@@ -57,9 +59,12 @@ function NodeBody({ data }) {
                     <div className="cond">{x.sub === t.text.always ? t.text.alwaysCap : t.text.when(x.sub)}</div>
                     {x.targets.map((a) => <div key={a.id} className="act">→ {a.label}{a.sub ? `: ${a.sub}` : ''}</div>)}
                   </>
+                ) : k === 'members' && data.edit ? (
+                  <span className="member">{x.label}<button className="rm nodrag" title={t.edit.remove} onClick={stop(() => data.onRemove(x))}>×</button></span>
                 ) : x.label}
               </div>
             ))}
+            {open && k === 'members' && data.edit && <div className="row add nodrag" onClick={stop(data.onAdd)}>{t.edit.addAgent}</div>}
           </div>
         )
       })}
@@ -93,7 +98,7 @@ async function layout(view, size) {
   return new Map(res.children.map((c) => [c.id, { x: c.x, y: c.y }]))
 }
 
-function Diagram({ graph, focusId, hideTypes, onSelect, t, theme }) {
+function Diagram({ graph, focusId, hideTypes, onSelect, t, theme, edit, onAdd, onRemove }) {
   const [flow, setFlow] = useState({ nodes: [], edges: [] })
   const [open, setOpen] = useState(new Map()) // `${nodeId}:${section}` -> bool
   const [hi, setHi] = useState(null) // clicked node: light up what it relates to
@@ -110,6 +115,10 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t, theme }) {
     isOpen: (k) => isOpen(n.id, k),
     setAll: (keys, value) => setOpen((o) => { const m = new Map(o); for (const k of keys) m.set(`${n.id}:${k}`, value); return m }),
     onPick: onSelect,
+    edit,
+    members: edit && n.type === 'queue' ? n.members ?? [] : n.members, // edit mode: empty queues can get agents too
+    onAdd: () => onAdd(n),
+    onRemove: (m) => onRemove(n, m),
   })
   const sections = view?.nodes.flatMap((n) => SECTIONS.filter(([k]) => n[k]).map(([k]) => [n.id, k])) ?? []
   const allOpen = sections.length > 0 && sections.every(([id, k]) => isOpen(id, k))
@@ -127,11 +136,12 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t, theme }) {
         edges: view.edges.map((e, i) => ({ id: 'e' + i, source: e.source, target: e.target, label: e.label })),
       })
       // refit only when the focus changes, not when a section is folded/unfolded
-      if (fitted.current !== view) requestAnimationFrame(() => fitView({ padding: 0.1 }))
-      fitted.current = view
+      const fitKey = `${focusId}|${hideTypes.join()}`
+      if (fitted.current !== fitKey) requestAnimationFrame(() => fitView({ padding: 0.1 }))
+      fitted.current = fitKey
     })
     return () => { live = false }
-  }, [view, open])
+  }, [view, open, edit])
 
   // One click lights up the clicked card's incoming path and the whole tree below it; the rest fades.
   useEffect(() => setHi(null), [view])
@@ -157,7 +167,7 @@ function Diagram({ graph, focusId, hideTypes, onSelect, t, theme }) {
     // ponytail: pixelRatio 2 fixed; huge graphs can exceed browser canvas limits -> lower it if export comes out blank
     const url = await toPng(document.querySelector('.react-flow__viewport'), {
       backgroundColor: EDGE[theme].png, width, height, pixelRatio: 2,
-      filter: (el) => !el.classList?.contains('min'),
+      filter: (el) => !['min', 'rm', 'add'].some((c) => el.classList?.contains(c)),
       style: { width: width + 'px', height: height + 'px', transform: `translate(${pad - b.x}px, ${pad - b.y}px) scale(1)` },
     })
     await saveFile(`${graph.nodes.find((n) => n.id === focusId)?.label ?? t.text.diagram}.png`, url)
@@ -209,6 +219,11 @@ export default function App() {
   const [hideTypes, setHideTypes] = useState([])
   const [focusId, setFocusId] = useState(null)
   const [selId, setSelId] = useState(null)
+  const [edit, setEdit] = useState(false)
+  const [dialog, setDialog] = useState(null) // { kind: 'add', queue } | { kind: 'confirm', action, queue, user }
+  const [busy, setBusy] = useState(false)
+  const [editError, setEditError] = useState(null)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     const load = () => {
@@ -249,6 +264,41 @@ export default function App() {
   const sel = graph.nodes.find((n) => n.id === selId)
   const focus = (id) => { setFocusId(id); setSelId(id) }
 
+  // One membership change, then re-read only memberships/users (focus and layout stay put).
+  async function run(action, queue, user) {
+    await (action === 'add' ? addMember : removeMember)(queue.id, user.id)
+    const part = await loadFromPptb(MEMBER_TABLES)
+    if (part) setSnap((s) => ({ ...s, raw: { ...s.raw, ...part.raw } }))
+  }
+  async function apply() {
+    const { action, queue, user } = dialog
+    setBusy(true)
+    setEditError(null)
+    try {
+      await run(action, queue, user)
+      const text = action === 'add' ? t.edit.added(user.label, queue.label) : t.edit.removed(user.label, queue.label)
+      notify(t.edit.mode, `${text} · ${snap.org} (${snap.environment})`, 'success')
+      setToast({ text, undo: () => run(action === 'add' ? 'remove' : 'add', queue, user) })
+      setDialog(null)
+    } catch (e) {
+      setEditError(String(e?.message ?? e))
+      notify(t.edit.failed, String(e?.message ?? e), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function undo() {
+    setBusy(true)
+    try {
+      await toast.undo()
+      setToast(null)
+    } catch (e) {
+      notify(t.edit.failed, String(e?.message ?? e), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="app">
       <aside className="side">
@@ -259,6 +309,16 @@ export default function App() {
           </select>
         </div>
         <small>{t.text.extracted} {graph.meta?.extractedAt && new Date(graph.meta.extractedAt).toLocaleString(lang)}</small>
+        {snap.environment && (
+          <div className="envrow">
+            <span className={'env ' + snap.environment.toLowerCase()} title={t.edit.env}>{snap.environment}</span>
+            {inPptb() && (
+              <label className="switch">
+                <input type="checkbox" checked={edit} onChange={(e) => setEdit(e.target.checked)} /> {t.edit.mode}
+              </label>
+            )}
+          </div>
+        )}
         {graph.meta.warnings.length > 0 && (
           <details className="warn">
             <summary>{t.text.tablesFailed(graph.meta.warnings.length)}</summary>
@@ -292,7 +352,10 @@ export default function App() {
       </aside>
       <main className="main">
         <ReactFlowProvider>
-          <Diagram graph={graph} focusId={focusId} hideTypes={hideTypes} onSelect={setSelId} t={t} theme={theme} />
+          <Diagram graph={graph} focusId={focusId} hideTypes={hideTypes} onSelect={setSelId} t={t} theme={theme} edit={edit}
+            onAdd={(queue) => { setEditError(null); setDialog({ kind: 'add', queue }) }}
+            onRemove={(queue, user) => { setEditError(null); setDialog({ kind: 'confirm', action: 'remove', queue, user }) }} />
+          {toast && <Toast toast={toast} busy={busy} onUndo={undo} onClose={() => setToast(null)} t={t} />}
         </ReactFlowProvider>
       </main>
       {sel && (
@@ -308,6 +371,7 @@ export default function App() {
           </dl>
         </aside>
       )}
+      {dialog && <EditDialog dialog={dialog} setDialog={setDialog} apply={apply} busy={busy} error={editError} org={snap.org} env={snap.environment} t={t} />}
     </div>
   )
 }
