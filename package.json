@@ -43,7 +43,7 @@
     "dist"
   ],
   "scripts": {
-    "test": "node src/i18n.test.mjs && node src/rules.test.mjs && node src/graph.test.mjs && node src/build.test.mjs && node src/pptb.test.mjs",
+    "test": "node src/i18n.test.mjs && node src/rules.test.mjs && node src/graph.test.mjs && node src/build.test.mjs && node src/pptb.test.mjs && node src/edit.test.mjs",
     "dev": "vite",
     "build": "vite build"
   },

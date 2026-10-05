@@ -5,25 +5,30 @@ import { QUERIES } from './queries.js'
 
 export const inPptb = () => Boolean(globalThis.toolboxAPI && globalThis.dataverseAPI)
 
-export async function loadFromPptb() {
+// All pages of one OData query; a failing table becomes { error } so the map still draws.
+export async function fetchQuery(query) {
+  try {
+    const rows = []
+    for (let q = query; q; ) {
+      const page = await dataverseAPI.queryData(q)
+      rows.push(...page.value)
+      q = page['@odata.nextLink']?.split(/\/api\/data\/v[\d.]+\//)[1]
+    }
+    return rows
+  } catch (e) {
+    return { error: String(e?.message ?? e) }
+  }
+}
+
+export async function loadFromPptb(keys = Object.keys(QUERIES)) {
   const conn = await toolboxAPI.connections.getActiveConnection()
   if (!conn) return null // UI shows "pick a connection"; reloads on connection:updated
   const raw = {}
-  await Promise.all(Object.entries(QUERIES).map(async ([key, query]) => {
-    try {
-      const rows = []
-      for (let q = query; q; ) {
-        const page = await dataverseAPI.queryData(q)
-        rows.push(...page.value)
-        q = page['@odata.nextLink']?.split(/\/api\/data\/v[\d.]+\//)[1]
-      }
-      raw[key] = rows
-    } catch (e) {
-      raw[key] = { error: String(e?.message ?? e) }
-    }
-  }))
-  return { org: conn.name || new URL(conn.url).hostname, extractedAt: new Date().toISOString(), raw }
+  await Promise.all(keys.map(async (key) => { raw[key] = await fetchQuery(QUERIES[key]) }))
+  return { org: conn.name || new URL(conn.url).hostname, environment: conn.environment, extractedAt: new Date().toISOString(), raw }
 }
+
+export const notify = (title, body, type) => (inPptb() ? toolboxAPI.utils.showNotification({ title, body, type }) : console.log(type, title, body))
 
 // Files and clipboard go through the host: a sandboxed tool iframe can't trigger downloads.
 export async function saveFile(name, dataUrlOrText) {
