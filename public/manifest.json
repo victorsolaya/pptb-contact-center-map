@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "Contact Center Map",
+  "version": "0.1.0",
+  "description": "Dibuja canales, workstreams, reglas, colas y agentes de Dynamics 365 Contact Center.",
+  "action": { "default_title": "Dibujar mapa del Contact Center de esta org" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["activeTab", "scripting", "storage", "unlimitedStorage"]
+}

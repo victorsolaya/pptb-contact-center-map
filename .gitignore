@@ -1,0 +1,5 @@
+node_modules
+dist
+.playwright-mcp
+# local snapshots of a real org (agent names/emails): never commit
+dev/

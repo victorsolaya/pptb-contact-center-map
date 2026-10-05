@@ -1,0 +1,61 @@
+{
+  "name": "@victorsolaya/pptb-contact-center-map",
+  "version": "0.1.0",
+  "type": "module",
+  "displayName": "Contact Center Map",
+  "description": "Draw the Dynamics 365 Contact Center configuration: channels, workstreams, routing rules, queues, overflow, operating hours and agents. Export to PNG or Mermaid.",
+  "main": "index.html",
+  "icon": "icon.svg",
+  "features": {
+    "multiConnection": "none",
+    "connectionRequirement": "required",
+    "minAPI": "1.2.0"
+  },
+  "contributors": [
+    {
+      "name": "Víctor Sánchez",
+      "url": "https://github.com/victorsolaya"
+    }
+  ],
+  "configurations": {
+    "repository": "https://github.com/victorsolaya/pptb-contact-center-map",
+    "website": "https://github.com/victorsolaya/pptb-contact-center-map",
+    "readmeUrl": "https://raw.githubusercontent.com/victorsolaya/pptb-contact-center-map/main/README.md"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/victorsolaya/pptb-contact-center-map.git"
+  },
+  "bugs": {
+    "url": "https://github.com/victorsolaya/pptb-contact-center-map/issues"
+  },
+  "homepage": "https://github.com/victorsolaya/pptb-contact-center-map#readme",
+  "keywords": [
+    "powerplatform",
+    "dataverse",
+    "toolbox",
+    "contact center",
+    "omnichannel",
+    "unified routing"
+  ],
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "node src/i18n.test.mjs && node src/rules.test.mjs && node src/graph.test.mjs && node src/build.test.mjs && node src/pptb.test.mjs",
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.12.0",
+    "elkjs": "^0.12.0",
+    "html-to-image": "^1.11.13",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.3.2"
+  }
+}
