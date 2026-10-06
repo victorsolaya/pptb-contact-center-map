@@ -6,7 +6,7 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 
 **channel → workstream → routing rulesets → rules → queues**, with each queue showing its **operating hours**, **PreQueue and InQueue overflow** and **agents** inside its own card.
 
-![A voice workstream drawn from its phone number through the classification and route-to-queue rulesets to two queues, each with its operating hours, PreQueue overflow and agents](https://raw.githubusercontent.com/victorsolaya/pptb-contact-center-map/main/docs/images/map.png)
+![A voice workstream drawn from its phone number through the classification and route-to-queue rulesets to two queues, each with its operating hours, PreQueue overflow and agents](docs/images/map.png)
 
 <sub>All screenshots use demo data.</sub>
 
@@ -24,9 +24,9 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 
 | Each queue in its own card | One click highlights the path |
 |---|---|
-| ![Queue card with its operating hours, a PreQueue overflow rule that transfers to a phone number outside operating hours, and its agents](https://raw.githubusercontent.com/victorsolaya/pptb-contact-center-map/main/docs/images/queue-card.png) | ![Clicking a queue lights up the rule, ruleset, workstream and channel that lead to it; the rest of the map fades](https://raw.githubusercontent.com/victorsolaya/pptb-contact-center-map/main/docs/images/highlight.png) |
+| ![Queue card with its operating hours, a PreQueue overflow rule that transfers to a phone number outside operating hours, and its agents](docs/images/queue-card.png) | ![Clicking a queue lights up the rule, ruleset, workstream and channel that lead to it; the rest of the map fades](docs/images/highlight.png) |
 
-![The same map in the ToolBox dark theme, for a WhatsApp workstream whose VIP queue overflows to a fallback queue](https://raw.githubusercontent.com/victorsolaya/pptb-contact-center-map/main/docs/images/dark.png)
+![The same map in the ToolBox dark theme, for a WhatsApp workstream whose VIP queue overflows to a fallback queue](docs/images/dark.png)
 
 ## Usage
 
@@ -43,17 +43,17 @@ Turn on **Edit mode** in the sidebar (only inside ToolBox). A banner shows the o
 - add or delete rules in route-to-queue and classification rulesets (**+ Add rule**, **×** on a rule);
 - edit the details of a workstream, queue or capacity profile from the detail panel (**✎ Edit**). For a workstream, this includes switching between unit-based and profile-based capacity, linking or unlinking capacity profiles, and creating a new profile.
 
-![Edit mode: the workstream form in the detail panel, switched to profile-based capacity with a new capacity profile being added](https://raw.githubusercontent.com/victorsolaya/pptb-contact-center-map/main/docs/images/edit-details.png)
+![Edit mode: the workstream form in the detail panel, switched to profile-based capacity with a new capacity profile being added](docs/images/edit-details.png)
 
 Nothing is written until you confirm. Every change shows a preview with the org and environment, adds a warning for Production, and can be undone from the message shown right after it.
 
 | Preview before saving | Undo right after |
 |---|---|
-| ![Review dialog listing the name change from old to new value and the capacity profile that will be created and linked](https://raw.githubusercontent.com/victorsolaya/pptb-contact-center-map/main/docs/images/edit-review.png) | ![After saving, the new capacity profile appears on the map and a message offers Undo](https://raw.githubusercontent.com/victorsolaya/pptb-contact-center-map/main/docs/images/edit-saved.png) |
+| ![Review dialog listing the name change from old to new value and the capacity profile that will be created and linked](docs/images/edit-review.png) | ![After saving, the new capacity profile appears on the map and a message offers Undo](docs/images/edit-saved.png) |
 
 | Add a rule | Create a workstream |
 |---|---|
-| ![New rule dialog: condition tier equals gold, then route to the queue Billing - Voice](https://raw.githubusercontent.com/victorsolaya/pptb-contact-center-map/main/docs/images/add-rule.png) | ![New workstream preview listing the records that will be created, with the Production warning](https://raw.githubusercontent.com/victorsolaya/pptb-contact-center-map/main/docs/images/new-workstream.png) |
+| ![New rule dialog: condition tier equals gold, then route to the queue Billing - Voice](docs/images/add-rule.png) | ![New workstream preview listing the records that will be created, with the Production warning](docs/images/new-workstream.png) |
 
 See [What this tool changes](#what-this-tool-changes) for exactly which records each action writes and how it is undone.
 
