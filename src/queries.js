@@ -24,3 +24,11 @@ export const QUERIES = {
   sms: 'msdyn_ocsmschannelsettings?$select=msdyn_name,_msdyn_liveworkstreamid_value',
   custom: 'msdyn_occustommessagingchannels?$select=msdyn_name,_msdyn_liveworkstreamid_value',
 }
+
+// One table of a snapshot's `raw` (keys as above); a table that failed to load is { error } and reads as empty.
+export const rows = (raw, key) => (Array.isArray(raw[key]) ? raw[key] : [])
+
+// queryData returns option-set and lookup labels in this annotation
+export const FV = '@OData.Community.Display.V1.FormattedValue'
+// label of a value as Dataverse formatted it, or the raw value
+export const formatted = (row, field) => row?.[field + FV] ?? row?.[field]

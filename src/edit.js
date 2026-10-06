@@ -4,19 +4,19 @@ import { fetchQuery, bind } from './pptb.js'
 import { parseXml } from './rules.js'
 
 const guid = (nodeId) => nodeId.split(':')[1]
-const odataText = (s) => encodeURIComponent(s.trim().replace(/'/g, "''"))
+const odataText = (text) => encodeURIComponent(text.trim().replace(/'/g, "''"))
 
 // ---------------------------------------------------------------- agents in queues
 
 // Enabled, human users matching name or email (application users excluded).
 export async function searchUsers(text) {
-  const v = odataText(text)
-  if (!v) return []
+  const searchText = odataText(text)
+  if (!searchText) return []
   const rows = await fetchQuery(
-    `systemusers?$select=fullname,internalemailaddress&$filter=isdisabled eq false and applicationid eq null and (contains(fullname,'${v}') or contains(internalemailaddress,'${v}'))&$orderby=fullname&$top=20`,
+    `systemusers?$select=fullname,internalemailaddress&$filter=isdisabled eq false and applicationid eq null and (contains(fullname,'${searchText}') or contains(internalemailaddress,'${searchText}'))&$orderby=fullname&$top=20`,
   )
   if (rows.error) throw new Error(rows.error)
-  return rows.map((u) => ({ id: `user:${u.systemuserid}`, label: u.fullname, sub: u.internalemailaddress }))
+  return rows.map((user) => ({ id: `user:${user.systemuserid}`, label: user.fullname, sub: user.internalemailaddress }))
 }
 
 // Same thing "Add users to queue" does in the admin center: queue <-> systemuser N:N.
@@ -50,32 +50,32 @@ export function rulesetKind(outputUnique, inputUnique) {
 // Variables a contract exposes, e.g. <complex key="liveworkitemcontext"><variable name="X" data-type="string"/>.
 export function contractVariables(xml) {
   const vars = []
-  const walk = (n) => {
-    if (n.tag === 'complex') for (const v of n.children.filter((c) => c.tag === 'variable')) vars.push({ attr: `${n.attrs.key}.${v.attrs.name}`, type: v.attrs['data-type'] ?? 'string' })
-    n.children.forEach(walk)
+  const walk = (node) => {
+    if (node.tag === 'complex') for (const variable of node.children.filter((child) => child.tag === 'variable')) vars.push({ attr: `${node.attrs.key}.${variable.attrs.name}`, type: variable.attrs['data-type'] ?? 'string' })
+    node.children.forEach(walk)
   }
   walk(parseXml(xml ?? ''))
   return vars
 }
 
-const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
-export const xmlEscape = (s) => String(s).replace(/[&<>"]/g, (c) => ESC[c])
-const pad = (n) => ' '.repeat(n)
+const XML_ENTITIES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
+export const xmlEscape = (text) => String(text).replace(/[&<>"]/g, (char) => XML_ENTITIES[char])
+const indent = (width) => ' '.repeat(width)
 
 // Same layout the routing designer writes: an AND group of conditions, then one or more set actions.
 export function buildRuleXml({ id, name, conditions = [], sets }) {
-  const cond = (c) => [
-    `${pad(10)}<condition operator="${xmlEscape(c.op)}">`,
-    `${pad(12)}<lhs type="attribute">${xmlEscape(c.attr)}</lhs>`,
-    ...(c.op === 'not-null' ? [] : [`${pad(12)}<rhs type="staticvalue">${xmlEscape(c.value)}</rhs>`]),
-    `${pad(10)}</condition>`,
+  const conditionXml = (condition) => [
+    `${indent(10)}<condition operator="${xmlEscape(condition.op)}">`,
+    `${indent(12)}<lhs type="attribute">${xmlEscape(condition.attr)}</lhs>`,
+    ...(condition.op === 'not-null' ? [] : [`${indent(12)}<rhs type="staticvalue">${xmlEscape(condition.value)}</rhs>`]),
+    `${indent(10)}</condition>`,
   ]
-  const set = (s) => [`${pad(8)}<setattribute>`, `${pad(10)}<lhs type="attribute">${xmlEscape(s.attr)}</lhs>`, `${pad(10)}<rhs type="staticvalue">${xmlEscape(s.value)}</rhs>`, `${pad(8)}</setattribute>`]
+  const setXml = (setAction) => [`${indent(8)}<setattribute>`, `${indent(10)}<lhs type="attribute">${xmlEscape(setAction.attr)}</lhs>`, `${indent(10)}<rhs type="staticvalue">${xmlEscape(setAction.value)}</rhs>`, `${indent(8)}</setattribute>`]
   return [
-    `${pad(4)}<rule id="${id}" name="${xmlEscape(name)}">`,
-    ...(conditions.length ? [`${pad(6)}<logical operator="AND">`, `${pad(8)}<logical operator="AND">`, ...conditions.flatMap(cond), `${pad(8)}</logical>`, `${pad(6)}</logical>`] : []),
-    `${pad(6)}<action>`, ...sets.flatMap(set), `${pad(6)}</action>`,
-    `${pad(4)}</rule>`,
+    `${indent(4)}<rule id="${id}" name="${xmlEscape(name)}">`,
+    ...(conditions.length ? [`${indent(6)}<logical operator="AND">`, `${indent(8)}<logical operator="AND">`, ...conditions.flatMap(conditionXml), `${indent(8)}</logical>`, `${indent(6)}</logical>`] : []),
+    `${indent(6)}<action>`, ...sets.flatMap(setXml), `${indent(6)}</action>`,
+    `${indent(4)}</rule>`,
   ].join('\n')
 }
 
@@ -83,28 +83,41 @@ export function buildRuleXml({ id, name, conditions = [], sets }) {
 export function appendRule(xml, ruleXml) {
   const empty = /<rules\s*\/>/
   if (empty.test(xml)) return xml.replace(empty, `<rules>\n${ruleXml}\n  </rules>`)
-  const i = xml.lastIndexOf('</rules>')
-  if (i < 0) throw Object.assign(new Error('no <rules> element'), { code: 'badDefinition' })
-  return xml.slice(0, i).replace(/\s*$/, '\n') + ruleXml + '\n  ' + xml.slice(i)
+  const rulesEnd = xml.lastIndexOf('</rules>')
+  if (rulesEnd < 0) throw Object.assign(new Error('no <rules> element'), { code: 'badDefinition' })
+  return xml.slice(0, rulesEnd).replace(/\s*$/, '\n') + ruleXml + '\n  ' + xml.slice(rulesEnd)
 }
 
 export function removeRule(xml, ruleId) {
-  const re = new RegExp(`\\r?\\n?[ \\t]*<rule id="${ruleId.replace(/[^\w-]/g, '')}"[\\s\\S]*?</rule>`)
-  if (!re.test(xml)) throw Object.assign(new Error('rule not found'), { code: 'ruleNotFound' })
-  return xml.replace(re, '')
+  const rulePattern = new RegExp(`\\r?\\n?[ \\t]*<rule id="${ruleId.replace(/[^\w-]/g, '')}"[\\s\\S]*?</rule>`)
+  if (!rulePattern.test(xml)) throw Object.assign(new Error('rule not found'), { code: 'ruleNotFound' })
+  return xml.replace(rulePattern, '')
 }
 
-const norm = (s) => (s ?? '').replace(/\r\n/g, '\n')
-export const readRuleset = async (id) => norm((await dataverseAPI.retrieve('msdyn_decisionruleset', id, ['msdyn_rulesetdefinition'])).msdyn_rulesetdefinition)
+const normalizeNewlines = (text) => (text ?? '').replace(/\r\n/g, '\n')
+export const readRuleset = async (id) => normalizeNewlines((await dataverseAPI.retrieve('msdyn_decisionruleset', id, ['msdyn_rulesetdefinition'])).msdyn_rulesetdefinition)
 export const readContract = async (id) => (await dataverseAPI.retrieve('msdyn_decisioncontract', id, ['msdyn_contractdefinition'])).msdyn_contractdefinition ?? ''
 
 // Optimistic write: refuse if the ruleset changed (e.g. in the admin center) since `expected` was read.
 export async function writeRuleset(id, expected, next) {
-  if ((await readRuleset(id)) !== norm(expected)) throw Object.assign(new Error('stale'), { code: 'stale' })
+  if ((await readRuleset(id)) !== normalizeNewlines(expected)) throw Object.assign(new Error('stale'), { code: 'stale' })
   await dataverseAPI.update('msdyn_decisionruleset', id, { msdyn_rulesetdefinition: next })
 }
 
 export const newId = () => crypto.randomUUID()
+
+// What the user is told when a change (or its undo) fails. Multi-record changes clean up after
+// themselves, so for those the message also says whether that worked.
+export function errorText(e, t) {
+  const known = { stale: t.edit.stale, staleRecord: t.edit.staleRecord, badDefinition: t.edit.badDefinition, ruleNotFound: t.edit.ruleNotFound }[e?.code]
+  if (known) return known
+  const message = String(e?.message ?? e)
+  if (e?.code === 'rolledBack') return `${message}. ${t.edit.rolledBack}`
+  if (e?.code === 'reverted') return `${message}. ${t.edit.reverted}`
+  if (e?.code === 'notReverted') return `${message}. ${t.edit.notReverted(e.leftovers.map((undo) => undo.label).join(', '))}`
+  if (e?.code === 'partial') return `${message}. ${t.edit.partial(e.leftovers.map((record) => `${record.entity} ${record.id}`).join(', '))}`
+  return message
+}
 
 // After each kind of change only these tables are re-read.
 export const MEMBER_TABLES = ['memberships', 'users']

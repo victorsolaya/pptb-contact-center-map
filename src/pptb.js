@@ -10,10 +10,10 @@ export const inPptb = () => Boolean(globalThis.toolboxAPI && globalThis.datavers
 export async function fetchQuery(query) {
   try {
     const rows = []
-    for (let q = query; q; ) {
-      const page = await dataverseAPI.queryData(q)
+    for (let pageQuery = query; pageQuery; ) {
+      const page = await dataverseAPI.queryData(pageQuery)
       rows.push(...page.value)
-      q = page['@odata.nextLink']?.split(/\/api\/data\/v[\d.]+\//)[1]
+      pageQuery = page['@odata.nextLink']?.split(/\/api\/data\/v[\d.]+\//)[1]
     }
     return rows
   } catch (e) {
@@ -22,36 +22,36 @@ export async function fetchQuery(query) {
 }
 
 export async function loadFromPptb(keys = Object.keys(QUERIES)) {
-  const conn = await toolboxAPI.connections.getActiveConnection()
-  if (!conn) return null // UI shows "pick a connection"; reloads on connection:updated
+  const connection = await toolboxAPI.connections.getActiveConnection()
+  if (!connection) return null // UI shows "pick a connection"; reloads on connection:updated
   const raw = {}
   await Promise.all(keys.map(async (key) => { raw[key] = await fetchQuery(QUERIES[key]) }))
-  return { org: conn.name || new URL(conn.url).hostname, environment: conn.environment, extractedAt: new Date().toISOString(), raw }
+  return { org: connection.name || new URL(connection.url).hostname, environment: connection.environment, extractedAt: new Date().toISOString(), raw }
 }
 
 // ---------------------------------------------------------------- lookups from this org's metadata
 
-const navCache = new Map()
-const setCache = new Map()
+const relationshipCache = new Map()
+const entitySetCache = new Map()
 export async function relationships(entity) {
-  if (!navCache.has(entity)) {
-    const rels = await fetchQuery(`EntityDefinitions(LogicalName='${entity}')/ManyToOneRelationships?$select=ReferencingAttribute,ReferencingEntityNavigationPropertyName,ReferencedEntity`)
-    if (rels.error) throw new Error(rels.error)
-    navCache.set(entity, rels)
+  if (!relationshipCache.has(entity)) {
+    const manyToOne = await fetchQuery(`EntityDefinitions(LogicalName='${entity}')/ManyToOneRelationships?$select=ReferencingAttribute,ReferencingEntityNavigationPropertyName,ReferencedEntity`)
+    if (manyToOne.error) throw new Error(manyToOne.error)
+    relationshipCache.set(entity, manyToOne)
   }
-  return navCache.get(entity)
+  return relationshipCache.get(entity)
 }
 async function entitySet(entity) {
-  if (!setCache.has(entity)) setCache.set(entity, (await dataverseAPI.queryData(`EntityDefinitions(LogicalName='${entity}')?$select=EntitySetName`)).EntitySetName)
-  return setCache.get(entity)
+  if (!entitySetCache.has(entity)) entitySetCache.set(entity, (await dataverseAPI.queryData(`EntityDefinitions(LogicalName='${entity}')?$select=EntitySetName`)).EntitySetName)
+  return entitySetCache.get(entity)
 }
 // `{ "<navigation property>@odata.bind": "/<entity set>(<id>)" }` for a lookup column;
 // id null clears it (`{ "<navigation property>": null }`, the documented PATCH form).
 export async function bind(entity, attribute, id) {
-  const rel = (await relationships(entity)).find((r) => r.ReferencingAttribute === attribute)
-  if (!rel) throw new Error(`${entity}.${attribute} is not a lookup in this environment`)
-  if (id == null) return { [rel.ReferencingEntityNavigationPropertyName]: null }
-  return { [`${rel.ReferencingEntityNavigationPropertyName}@odata.bind`]: `/${await entitySet(rel.ReferencedEntity)}(${normGuid(id)})` }
+  const relationship = (await relationships(entity)).find((candidate) => candidate.ReferencingAttribute === attribute)
+  if (!relationship) throw new Error(`${entity}.${attribute} is not a lookup in this environment`)
+  if (id == null) return { [relationship.ReferencingEntityNavigationPropertyName]: null }
+  return { [`${relationship.ReferencingEntityNavigationPropertyName}@odata.bind`]: `/${await entitySet(relationship.ReferencedEntity)}(${normGuid(id)})` }
 }
 
 // ToolBox notification; outside ToolBox (dev) nothing is logged: the text can contain user names.
@@ -64,7 +64,7 @@ export async function saveFile(name, dataUrlOrText) {
     return Object.assign(document.createElement('a'), { href, download: name }).click()
   }
   const content = dataUrlOrText.startsWith('data:')
-    ? Uint8Array.from(atob(dataUrlOrText.split(',')[1]), (c) => c.charCodeAt(0))
+    ? Uint8Array.from(atob(dataUrlOrText.split(',')[1]), (char) => char.charCodeAt(0))
     : dataUrlOrText
   await toolboxAPI.fileSystem.saveFile(name, content)
 }

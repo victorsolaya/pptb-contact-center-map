@@ -3,14 +3,14 @@ import assert from 'node:assert/strict'
 const calls = []
 globalThis.toolboxAPI = { connections: { getActiveConnection: async () => ({ name: 'CRM PRE', url: 'https://x.crm4.dynamics.com', environment: 'UAT' }) } }
 globalThis.dataverseAPI = {
-  queryData: async (q) => {
-    if (q.includes('ManyToOneRelationships')) return { value: [{ ReferencingAttribute: 'msdyn_operatinghourid', ReferencingEntityNavigationPropertyName: 'msdyn_operatinghourid', ReferencedEntity: 'msdyn_operatinghour' }] }
-    if (q.includes('EntitySetName')) return { EntitySetName: 'msdyn_operatinghours' }
-    calls.push(['query', q])
+  queryData: async (query) => {
+    if (query.includes('ManyToOneRelationships')) return { value: [{ ReferencingAttribute: 'msdyn_operatinghourid', ReferencingEntityNavigationPropertyName: 'msdyn_operatinghourid', ReferencedEntity: 'msdyn_operatinghour' }] }
+    if (query.includes('EntitySetName')) return { EntitySetName: 'msdyn_operatinghours' }
+    calls.push(['query', query])
     return { value: [{ systemuserid: 'u1', fullname: "Ana O'Neil", internalemailaddress: 'ana@x.com' }] }
   },
-  associate: async (...a) => calls.push(['associate', ...a]),
-  disassociate: async (...a) => calls.push(['disassociate', ...a]),
+  associate: async (...args) => calls.push(['associate', ...args]),
+  disassociate: async (...args) => calls.push(['disassociate', ...args]),
 }
 const { searchUsers, addMember, removeMember, MEMBER_TABLES } = await import('./edit.js')
 const { loadFromPptb } = await import('./pptb.js')
@@ -18,9 +18,9 @@ const { loadFromPptb } = await import('./pptb.js')
 // search: quotes escaped for OData, value URL-encoded, app users excluded
 const found = await searchUsers(" O'Ne ")
 assert.deepEqual(found, [{ id: 'user:u1', label: "Ana O'Neil", sub: 'ana@x.com' }])
-const q = calls.at(-1)[1]
-assert.match(q, /contains\(fullname,'O''Ne'\)/)
-assert.match(q, /isdisabled eq false and applicationid eq null/)
+const query = calls.at(-1)[1]
+assert.match(query, /contains\(fullname,'O''Ne'\)/)
+assert.match(query, /isdisabled eq false and applicationid eq null/)
 assert.deepEqual(await searchUsers('   '), [])
 
 // writes use the queue <-> systemuser N:N with bare GUIDs
@@ -30,9 +30,9 @@ assert.deepEqual(calls.at(-2), ['associate', 'queue', 'q1', 'queuemembership_ass
 assert.deepEqual(calls.at(-1), ['disassociate', 'queue', 'q1', 'queuemembership_association', 'u1'])
 
 // partial refresh only re-reads the requested tables and carries the environment
-const snap = await loadFromPptb(MEMBER_TABLES)
-assert.deepEqual(Object.keys(snap.raw).sort(), ['memberships', 'users'])
-assert.equal(snap.environment, 'UAT')
+const snapshot = await loadFromPptb(MEMBER_TABLES)
+assert.deepEqual(Object.keys(snapshot.raw).sort(), ['memberships', 'users'])
+assert.equal(snapshot.environment, 'UAT')
 console.log('edit ok')
 
 // ---------------------------------------------------------------- rules
@@ -66,11 +66,11 @@ assert.ok(next.startsWith(base.slice(0, base.lastIndexOf('</rules>')).trimEnd())
 assert.equal(removeRule(next, 'r-2'), base, 'remove restores the original byte for byte')
 assert.throws(() => removeRule(base, 'nope'))
 // definitions stored with CRLF: removing a rule leaves no stray \r
-const crlf = (s) => s.replace(/\n/g, '\r\n')
-assert.equal(removeRule(crlf(next), 'r-2'), crlf(base))
+const toCrlf = (text) => text.replace(/\n/g, '\r\n')
+assert.equal(removeRule(toCrlf(next), 'r-2'), toCrlf(base))
 // classification rule without conditions, into an empty ruleset
-const cls = appendRule('<decision hit-policy="first" version="1"><rules /></decision>', buildRuleXml({ id: 'c-1', name: 'Default', sets: [{ attr: 'liveworkitemcontext.tier', value: 'gold' }] }))
-assert.deepEqual(parseRules(cls).map((r) => [r.when, r.set[0].attr, r.set[0].value]), [['', 'liveworkitemcontext.tier', 'gold']])
+const classification = appendRule('<decision hit-policy="first" version="1"><rules /></decision>', buildRuleXml({ id: 'c-1', name: 'Default', sets: [{ attr: 'liveworkitemcontext.tier', value: 'gold' }] }))
+assert.deepEqual(parseRules(classification).map((rule) => [rule.when, rule.set[0].attr, rule.set[0].value]), [['', 'liveworkitemcontext.tier', 'gold']])
 
 // kinds from contract unique names; never overflow/assignment/system
 assert.equal(rulesetKind('msdyn_demandqueueidentificationoutput', 'new_abc'), 'route')
@@ -87,16 +87,26 @@ assert.deepEqual(contractVariables(`<contract version="1"><entity logical-name="
 // optimistic write: refuses when the ruleset changed since it was read
 let stored = base
 globalThis.dataverseAPI.retrieve = async () => ({ msdyn_rulesetdefinition: stored.replace(/\n/g, '\r\n') })
-globalThis.dataverseAPI.update = async (_e, _id, rec) => { stored = rec.msdyn_rulesetdefinition }
+globalThis.dataverseAPI.update = async (_entity, _id, record) => { stored = record.msdyn_rulesetdefinition }
 await writeRuleset('rs1', base, next)
 assert.equal(stored, next)
 await assert.rejects(writeRuleset('rs1', base, base), (e) => e.code === 'stale')
 
 // queue create/delete payloads
-globalThis.dataverseAPI.create = async (entity, rec) => (calls.push(['create', entity, rec]), { id: 'new-q' })
-globalThis.dataverseAPI.delete = async (...a) => calls.push(['delete', ...a])
+globalThis.dataverseAPI.create = async (entity, record) => (calls.push(['create', entity, record]), { id: 'new-q' })
+globalThis.dataverseAPI.delete = async (...args) => calls.push(['delete', ...args])
 assert.equal(await createQueue({ name: ' Billing ', type: 192350001, strategy: 192350000, priority: 10, hoursId: 'h1' }), 'new-q')
 assert.deepEqual(calls.at(-1), ['create', 'queue', { name: 'Billing', msdyn_isomnichannelqueue: true, queueviewtype: 1, msdyn_queuetype: 192350001, msdyn_assignmentstrategy: 192350000, msdyn_priority: 10, 'msdyn_operatinghourid@odata.bind': '/msdyn_operatinghours(h1)' }])
 await deleteQueue('new-q')
 assert.deepEqual(calls.at(-1), ['delete', 'queue', 'new-q'])
+
+// error messages: known codes are translated, cleanup outcomes are appended
+const { errorText } = await import('./edit.js')
+const { LANGS } = await import('./i18n.js')
+const en = LANGS.en
+assert.equal(errorText({ code: 'stale' }, en), en.edit.stale)
+assert.equal(errorText(new Error('403'), en), '403')
+assert.equal(errorText('offline', en), 'offline')
+assert.equal(errorText(Object.assign(new Error('403'), { code: 'partial', leftovers: [{ entity: 'queue', id: 'q-1' }] }), en), `403. ${en.edit.partial('queue q-1')}`)
+assert.equal(errorText(Object.assign(new Error('403'), { code: 'notReverted', leftovers: [{ label: 'queue q-1' }, { label: 'queue q-2' }] }), en), `403. ${en.edit.notReverted('queue q-1, queue q-2')}`)
 console.log('rules edit ok')

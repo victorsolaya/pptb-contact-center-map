@@ -9,7 +9,7 @@ const xml = `<decision><rules><rule id="r1" name="Advisor">
   <action><setattribute><lhs type="attribute">assign_to.queue</lhs><rhs type="staticvalue">{${Q}}</rhs></setattribute></action>
 </rule></rules></decision>`
 
-const g = buildGraph({
+const graph = buildGraph({
   org: 'x.crm4.dynamics.com',
   raw: {
     workstreams: [{ msdyn_liveworkstreamid: 'ws1', msdyn_name: 'WS', statecode: 0 }],
@@ -30,11 +30,11 @@ const g = buildGraph({
   },
 }, LANGS.es)
 
-const labels = (s) => s.nodes.map((n) => n.label).sort().join('|')
+const labels = (subgraph) => subgraph.nodes.map((node) => node.label).sort().join('|')
 // channel -> workstream -> active ruleset -> rule -> queue (GUID in XML, braces/case differ) -> user
-assert.equal(labels(neighborhood(g, 'user:u1')), 'Advisor|Advisor queue|Ana|Routing|WA|WS')
-assert.ok(!g.edges.some((e) => e.target === 'ruleset:rsold'), 'inactive routing config must not link')
-assert.equal(g.edges.filter((e) => e.source.startsWith('queue:')).length, 1, 'non-omnichannel memberships dropped')
-assert.match(g.nodes.find((n) => n.type === 'rule').data.Acciones, /Cola → Advisor queue/)
-assert.deepEqual(g.meta.warnings, ['facebook: 400 boom'])
+assert.equal(labels(neighborhood(graph, 'user:u1')), 'Advisor|Advisor queue|Ana|Routing|WA|WS')
+assert.ok(!graph.edges.some((edge) => edge.target === 'ruleset:rsold'), 'inactive routing config must not link')
+assert.equal(graph.edges.filter((edge) => edge.source.startsWith('queue:')).length, 1, 'non-omnichannel memberships dropped')
+assert.match(graph.nodes.find((node) => node.type === 'rule').data.Acciones, /Cola → Advisor queue/)
+assert.deepEqual(graph.meta.warnings, ['facebook: 400 boom'])
 console.log('build ok')

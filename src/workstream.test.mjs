@@ -5,9 +5,9 @@ const writes = []
 let failOn = null
 globalThis.toolboxAPI = {}
 globalThis.dataverseAPI = {
-  queryData: async (q) => {
-    const rel = /EntityDefinitions\(LogicalName='(\w+)'\)\/ManyToOneRelationships/.exec(q)
-    if (rel) {
+  queryData: async (query) => {
+    const relationshipMatch = /EntityDefinitions\(LogicalName='(\w+)'\)\/ManyToOneRelationships/.exec(query)
+    if (relationshipMatch) {
       const lookups = {
         msdyn_liveworkstream: [['msdyn_routingcontractid', 'msdyn_decisioncontract'], ['msdyn_defaultqueue', 'queue'], ['msdyn_notificationtemplate_incoming_auth', 'msdyn_notificationtemplate']],
         msdyn_ocliveworkstreamcontextvariable: [['msdyn_liveworkstreamid', 'msdyn_liveworkstream']],
@@ -15,13 +15,13 @@ globalThis.dataverseAPI = {
         msdyn_decisionruleset: [['msdyn_inputcontractid', 'msdyn_decisioncontract'], ['msdyn_outputcontractid', 'msdyn_decisioncontract']],
         msdyn_routingconfiguration: [['msdyn_liveworkstreamid', 'msdyn_liveworkstream']],
         msdyn_routingconfigurationstep: [['msdyn_routingconfigurationid', 'msdyn_routingconfiguration'], ['msdyn_rulesetid', 'msdyn_decisionruleset']],
-      }[rel[1]]
+      }[relationshipMatch[1]]
       // navigation property deliberately differs from the column name, as it can in real orgs
       return { value: lookups.map(([attr, target]) => ({ ReferencingAttribute: attr, ReferencingEntityNavigationPropertyName: `nav_${attr}`, ReferencedEntity: target })) }
     }
-    const set = /EntityDefinitions\(LogicalName='(\w+)'\)\?\$select=EntitySetName/.exec(q)
-    if (set) return { EntitySetName: `${set[1]}_set` }
-    throw new Error('unexpected query ' + q)
+    const entitySetMatch = /EntityDefinitions\(LogicalName='(\w+)'\)\?\$select=EntitySetName/.exec(query)
+    if (entitySetMatch) return { EntitySetName: `${entitySetMatch[1]}_set` }
+    throw new Error('unexpected query ' + query)
   },
   retrieve: async (entity) =>
     entity === 'msdyn_liveworkstream'
@@ -60,11 +60,11 @@ const raw = {
 }
 
 // only admin-center workstreams (with a routing contract) can be templates
-assert.deepEqual(templates(raw).map((w) => w.msdyn_name), ['WhatsApp'])
+assert.deepEqual(templates(raw).map((workstream) => workstream.msdyn_name), ['WhatsApp'])
 
 // plan: own non-system variables, capacity, the route step only (classification is skipped)
 const plan = planWorkstream(raw, 'ws-1')
-assert.deepEqual(plan.variables.map((v) => v.msdyn_name), ['segment'])
+assert.deepEqual(plan.variables.map((variable) => variable.msdyn_name), ['segment'])
 assert.equal(plan.capacity.length, 1)
 assert.equal(plan.route.ruleset.msdyn_decisionrulesetid, 'rs-route')
 assert.equal(plan.route.rules, 1)
@@ -79,49 +79,49 @@ assert.equal(empty.route.definition, '<decision hit-policy="all" version="1">\n 
 
 // create: order, binds through metadata, nothing secret or channel-bound copied
 const { workstreamId, created } = await createWorkstream('Sales WhatsApp', plan)
-assert.deepEqual(created.map((c) => c.entity), [
+assert.deepEqual(created.map((record) => record.entity), [
   'msdyn_decisioncontract', 'msdyn_liveworkstream', 'msdyn_ocliveworkstreamcontextvariable', 'msdyn_liveworkstreamcapacityprofile',
   'msdyn_decisionruleset', 'msdyn_routingconfiguration', 'msdyn_routingconfigurationstep',
 ])
-const rec = (entity) => writes.find(([op, e]) => op === 'create' && e === entity)[2]
-assert.match(rec('msdyn_decisioncontract').msdyn_uniquename, /^new_[0-9a-f_]{36}$/)
-assert.match(rec('msdyn_decisioncontract').msdyn_contractdefinition, /variable name="segment"/)
-const ws = rec('msdyn_liveworkstream')
-assert.equal(ws.msdyn_name, 'Sales WhatsApp')
-assert.equal(ws.msdyn_streamsource, 192390001)
-assert.equal(ws['nav_msdyn_routingcontractid@odata.bind'], '/msdyn_decisioncontract_set(msdyn_decisioncontract-1)')
-assert.equal(ws['nav_msdyn_defaultqueue@odata.bind'], '/queue_set(q-fallback)')
-assert.equal(ws.msdyn_sessiontemplate_default, 'bm_whatsapp_session', 'templates are copied as text')
-assert.equal(ws.msdyn_notificationtemplate_incoming_auth, 'bm_whatsapp_incoming')
-assert.ok(!Object.keys(ws).some((k) => k.includes('@OData.Community')), 'no annotations sent back')
-assert.ok(!('msdyn_apikey' in ws) && !Object.keys(ws).some((k) => k.includes('bot')), 'no secrets, no bot')
-assert.equal(rec('msdyn_ocliveworkstreamcontextvariable').msdyn_name, 'segment')
-assert.equal(rec('msdyn_decisionruleset').msdyn_rulesetdefinition, route)
-assert.equal(rec('msdyn_decisionruleset')['nav_msdyn_outputcontractid@odata.bind'], '/msdyn_decisioncontract_set(c-out)')
-assert.equal(rec('msdyn_routingconfigurationstep').msdyn_type, 192350002)
+const createdRecord = (entity) => writes.find(([op, writtenEntity]) => op === 'create' && writtenEntity === entity)[2]
+assert.match(createdRecord('msdyn_decisioncontract').msdyn_uniquename, /^new_[0-9a-f_]{36}$/)
+assert.match(createdRecord('msdyn_decisioncontract').msdyn_contractdefinition, /variable name="segment"/)
+const workstream = createdRecord('msdyn_liveworkstream')
+assert.equal(workstream.msdyn_name, 'Sales WhatsApp')
+assert.equal(workstream.msdyn_streamsource, 192390001)
+assert.equal(workstream['nav_msdyn_routingcontractid@odata.bind'], '/msdyn_decisioncontract_set(msdyn_decisioncontract-1)')
+assert.equal(workstream['nav_msdyn_defaultqueue@odata.bind'], '/queue_set(q-fallback)')
+assert.equal(workstream.msdyn_sessiontemplate_default, 'bm_whatsapp_session', 'templates are copied as text')
+assert.equal(workstream.msdyn_notificationtemplate_incoming_auth, 'bm_whatsapp_incoming')
+assert.ok(!Object.keys(workstream).some((field) => field.includes('@OData.Community')), 'no annotations sent back')
+assert.ok(!('msdyn_apikey' in workstream) && !Object.keys(workstream).some((field) => field.includes('bot')), 'no secrets, no bot')
+assert.equal(createdRecord('msdyn_ocliveworkstreamcontextvariable').msdyn_name, 'segment')
+assert.equal(createdRecord('msdyn_decisionruleset').msdyn_rulesetdefinition, route)
+assert.equal(createdRecord('msdyn_decisionruleset')['nav_msdyn_outputcontractid@odata.bind'], '/msdyn_decisioncontract_set(c-out)')
+assert.equal(createdRecord('msdyn_routingconfigurationstep').msdyn_type, 192350002)
 assert.equal(workstreamId, 'msdyn_liveworkstream-2')
 
 // undo deletes newest first
 writes.length = 0
 assert.deepEqual(await deleteCreated(created), [])
-assert.deepEqual(writes.map(([, e]) => e), [...created].reverse().map((c) => c.entity))
+assert.deepEqual(writes.map(([, entity]) => entity), [...created].reverse().map((record) => record.entity))
 
 // retrying an undo only deletes what is left
-const real = globalThis.dataverseAPI.delete
+const realDelete = globalThis.dataverseAPI.delete
 let broken = 'msdyn_routingconfiguration-6'
-globalThis.dataverseAPI.delete = async (entity, id) => { if (id === broken) throw new Error('locked'); return real(entity, id) }
+globalThis.dataverseAPI.delete = async (entity, id) => { if (id === broken) throw new Error('locked'); return realDelete(entity, id) }
 let remaining = await deleteCreated(created)
-assert.deepEqual(remaining.map((r) => r.id), ['msdyn_routingconfiguration-6'])
+assert.deepEqual(remaining.map((record) => record.id), ['msdyn_routingconfiguration-6'])
 broken = null
 remaining = await deleteCreated(remaining)
 assert.deepEqual(remaining, [])
-globalThis.dataverseAPI.delete = real
+globalThis.dataverseAPI.delete = realDelete
 
 // a failure halfway deletes what was already created and says so
 writes.length = 0
 failOn = 'msdyn_routingconfiguration'
 await assert.rejects(createWorkstream('Broken', plan), (e) => e.code === 'rolledBack' && e.leftovers.length === 0)
-const createdBeforeFailure = writes.filter(([op]) => op === 'create').map(([, e]) => e)
-const deleted = writes.filter(([op]) => op === 'delete').map(([, e]) => e)
+const createdBeforeFailure = writes.filter(([op]) => op === 'create').map(([, entity]) => entity)
+const deleted = writes.filter(([op]) => op === 'delete').map(([, entity]) => entity)
 assert.deepEqual(deleted, [...createdBeforeFailure].reverse())
 console.log('workstream ok')

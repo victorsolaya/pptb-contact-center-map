@@ -1,39 +1,39 @@
 // Parser for Dataverse decision-ruleset XML: <decision><rules><rule><logical|condition/><action/></rule></rules></decision>
 // Machine-generated XML with no CDATA/namespaces, so a regex tokenizer is enough.
 
-const decode = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
+const decode = (text) => text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
 
 export function parseXml(xml) {
   const root = { tag: '#root', attrs: {}, children: [], text: '' }
   const stack = [root]
-  for (const m of xml.matchAll(/<(\/?)([\w:.-]+)((?:\s+[\w:.-]+="[^"]*")*)\s*(\/?)>|([^<]+)/g)) {
+  for (const match of xml.matchAll(/<(\/?)([\w:.-]+)((?:\s+[\w:.-]+="[^"]*")*)\s*(\/?)>|([^<]+)/g)) {
     const top = stack.at(-1)
-    if (m[5] !== undefined) top.text += decode(m[5])
-    else if (m[1]) stack.length > 1 && stack.pop()
+    if (match[5] !== undefined) top.text += decode(match[5])
+    else if (match[1]) stack.length > 1 && stack.pop()
     else {
-      const node = { tag: m[2], attrs: Object.fromEntries([...m[3].matchAll(/([\w:.-]+)="([^"]*)"/g)].map((a) => [a[1], decode(a[2])])), children: [], text: '' }
+      const node = { tag: match[2], attrs: Object.fromEntries([...match[3].matchAll(/([\w:.-]+)="([^"]*)"/g)].map((attrMatch) => [attrMatch[1], decode(attrMatch[2])])), children: [], text: '' }
       top.children.push(node)
-      if (!m[4]) stack.push(node)
+      if (!match[4]) stack.push(node)
     }
   }
   return root
 }
 
-const side = (s) => (s.attrs.type === 'staticvalue' ? JSON.stringify(s.text.trim()) : s.text.trim())
+const operandText = (operand) => (operand.attrs.type === 'staticvalue' ? JSON.stringify(operand.text.trim()) : operand.text.trim())
 
-function expr(n, parentOp) {
-  if (n.tag === 'condition') {
-    const [l, r] = n.children
-    return [l && side(l), n.attrs.operator, r && side(r)].filter(Boolean).join(' ')
+function expressionOf(node, parentOperator) {
+  if (node.tag === 'condition') {
+    const [left, right] = node.children
+    return [left && operandText(left), node.attrs.operator, right && operandText(right)].filter(Boolean).join(' ')
   }
-  if (n.tag !== 'logical') return ''
-  const op = n.attrs.operator
-  const parts = n.children.map((c) => expr(c, op)).filter(Boolean)
-  const s = parts.join(` ${op} `)
-  return parts.length > 1 && parentOp && parentOp !== op ? `(${s})` : s
+  if (node.tag !== 'logical') return ''
+  const operator = node.attrs.operator
+  const parts = node.children.map((child) => expressionOf(child, operator)).filter(Boolean)
+  const joined = parts.join(` ${operator} `)
+  return parts.length > 1 && parentOperator && parentOperator !== operator ? `(${joined})` : joined
 }
 
-export const normGuid = (v) => v?.replace(/[{}]/g, '').toLowerCase()
+export const normGuid = (guid) => guid?.replace(/[{}]/g, '').toLowerCase()
 
 // Readable condition: the designer emits `x not-null AND x == v`, the guard adds nothing when reading.
 // `t` is the i18n dictionary (only t.text.outsideHours / insideHours are used).
@@ -46,17 +46,17 @@ export const simplify = (when, t) =>
 
 export function parseRules(xml) {
   const rules = []
-  const walk = (n) => (n.tag === 'rule' ? rules.push(n) : n.children.forEach(walk))
+  const walk = (node) => (node.tag === 'rule' ? rules.push(node) : node.children.forEach(walk))
   walk(parseXml(xml ?? ''))
-  return rules.map((r) => {
-    const logic = r.children.find((c) => c.tag === 'logical' || c.tag === 'condition')
-    const acts = r.children.find((c) => c.tag === 'action')?.children ?? []
+  return rules.map((rule) => {
+    const logic = rule.children.find((child) => child.tag === 'logical' || child.tag === 'condition')
+    const actions = rule.children.find((child) => child.tag === 'action')?.children ?? []
     return {
-      id: r.attrs.id,
-      name: r.attrs.name,
-      when: logic ? expr(logic) : '',
-      set: acts.filter((a) => a.tag === 'setattribute').map((a) => ({ attr: a.children[0]?.text.trim(), value: a.children[1]?.text.trim() })),
-      orderBy: acts.filter((a) => a.tag === 'orderby').map((o) => o.text.trim() + (o.attrs.descending === 'true' ? ' desc' : '')),
+      id: rule.attrs.id,
+      name: rule.attrs.name,
+      when: logic ? expressionOf(logic) : '',
+      set: actions.filter((action) => action.tag === 'setattribute').map((action) => ({ attr: action.children[0]?.text.trim(), value: action.children[1]?.text.trim() })),
+      orderBy: actions.filter((action) => action.tag === 'orderby').map((action) => action.text.trim() + (action.attrs.descending === 'true' ? ' desc' : '')),
     }
   })
 }
