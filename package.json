@@ -1,14 +1,13 @@
 {
   "name": "@victorsolaya/pptb-contact-center-map",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "displayName": "Contact Center Map",
   "description": "Draw the Dynamics 365 Contact Center configuration: channels, workstreams, routing rules, queues, overflow, operating hours and agents. Export to PNG or Mermaid.",
   "main": "index.html",
   "icon": "icon.svg",
   "features": {
-    "multiConnection": "none",
-    "connectionRequirement": "required",
+    "connections": 1,
     "minAPI": "1.2.0"
   },
   "contributors": [
