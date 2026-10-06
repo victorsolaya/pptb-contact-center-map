@@ -17,8 +17,9 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 - Overflow actions resolved to their target queue or phone number. "Transfer to queue" overflows are also drawn as an arrow.
 - Every section inside a queue card (operating hours, PreQueue, InQueue, agents) can be minimized with its **−/+** button, or all at once from the toolbar.
 - One click on a card highlights its incoming path and everything below it; click the background to clear.
+- The detail panel on the right can be resized by dragging its left edge (or with the arrow keys on it) and minimized with **›**; both are remembered.
 - **Export PNG** for documents and **Copy Mermaid** for wikis or Markdown.
-- Optional **Edit mode** (off by default): add or remove agents, create queues, create workstreams from an existing one, edit the details of workstreams, queues and capacity profiles (including unit-based or profile-based capacity and new capacity profiles), and add or delete rules in route-to-queue and classification rulesets, with preview, confirmation and undo. See [What this tool changes](#what-this-tool-changes).
+- Optional **Edit mode** (off by default): add or remove agents, create queues, create workstreams from an existing one, edit the details of workstreams, queues and capacity profiles (including unit-based or profile-based capacity and new capacity profiles), edit how a workstream identifies the customer, and add or delete rules in route-to-queue and classification rulesets, with preview, confirmation and undo. See [What this tool changes](#what-this-tool-changes).
 - Follows the ToolBox light and dark theme.
 - Available in English, Spanish, Portuguese, French, German and Italian. The language follows your system and can be changed in the sidebar. Values coming from Dataverse (option sets, lookups) use the language of the connected user.
 
@@ -41,9 +42,14 @@ Turn on **Edit mode** in the sidebar (only inside ToolBox). A banner shows the o
 - add or remove agents in a queue card (**+ Add agent**, **×**);
 - create a queue, or a workstream copied from an existing one of the same channel (**Create → Queue / Workstream**);
 - add or delete rules in route-to-queue and classification rulesets (**+ Add rule**, **×** on a rule);
-- edit the details of a workstream, queue or capacity profile from the detail panel (**✎ Edit**). For a workstream, this includes switching between unit-based and profile-based capacity, linking or unlinking capacity profiles, and creating a new profile.
+- edit the details of a workstream, queue or capacity profile from the detail panel (**✎ Edit**). For a workstream, this includes switching between unit-based and profile-based capacity, linking or unlinking capacity profiles, and creating a new profile;
+- edit how a workstream identifies the customer (**✎ Customer identification** in the detail panel). The **Visual** tab shows, for each table (account, contact, case), one row per condition: which columns must match a conversation value (a pre-conversation answer such as Name or Email, the customer's phone number, or a context variable) or a fixed value (such as Status Reason = 1), and which table is preferred when several match. The **FetchXML** tab shows the whole column formatted for developers, and any table can be edited there. The admin center has no screen for these rules; the detail panel also shows them read-only.
 
 ![Edit mode: the workstream form in the detail panel, switched to profile-based capacity with a new capacity profile being added](docs/images/edit-details.png)
+
+| Customer identification (visual) | The same rules as FetchXML |
+|---|---|
+| ![Customer identification: for the contact table, only active records, the name, the customer's phone number against Mobile Phone, Business Phone or Home Phone, and the email](docs/images/identification.png) | ![The FetchXML tab: the whole column formatted, one tag per line](docs/images/identification-xml.png) |
 
 Nothing is written until you confirm. Every change shows a preview with the org and environment, adds a warning for Production, and can be undone from the message shown right after it.
 
@@ -81,6 +87,7 @@ With **Edit mode** switched on (a switch in the sidebar, off by default and only
 | Link or unlink capacity profiles of a profile-based workstream | Create or delete `msdyn_liveworkstreamcapacityprofile` | Deletes the new link / creates the removed link again |
 | Create a capacity profile from a workstream | Create `msdyn_capacityprofile` (name, default maximum, block assignment, reset immediately, unique name `new_<id>` like the admin center) and link it to the workstream | Deletes the link and the profile |
 | Edit a queue | Update `queue`: name, priority and operating hours | Writes the previous values back |
+| Edit the customer identification of a workstream | Update `msdyn_liveworkstream.msdyn_recordidentificationrule`. Only the top-level filter of each edited table (column = value matches) and the `isPreferred` flags are rewritten; every other part of the XML is left as it was (line endings are normalized to LF). The **FetchXML** tab shows the whole column formatted for developers and lets you edit any table; the XML is checked (well formed, a rule set whose rules have `PrimaryEntity`, `fetch`/`entity` and `ContextKey`, at most one preferred table) before it can be reviewed. Tables whose rule links other tables or nests groups are shown but never edited, and conditions on fixed values (such as `statuscode = 1`) are kept | Writes the previous XML back |
 | Edit a capacity profile | Update `msdyn_capacityprofile`: name, default maximum and block assignment. The preview says how many workstreams use the profile | Writes the previous values back |
 
 Overflow, assignment and system rulesets are never edited. Rule conditions can only use the variables of the ruleset's input contract (or attributes its rules already use) and operators already used in the environment. Before writing a ruleset or the edited fields of a record, the tool reads them again and refuses to write if they changed since the map was loaded (for example in the admin center); undo checks the same before writing the previous values back. Capacity profile links are not re-checked: linking a profile someone else already linked adds a second link, and unlinking one that is already gone fails and reverts the save. Refreshing the map closes an open edit form. When saving details changes several records and one fails, the ones already changed are reverted before the error is shown.

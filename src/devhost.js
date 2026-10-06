@@ -23,6 +23,12 @@ const LOOKUPS = {
   msdyn_routingconfiguration: [['msdyn_liveworkstreamid', 'msdyn_liveworkstream']],
   msdyn_routingconfigurationstep: [['msdyn_routingconfigurationid', 'msdyn_routingconfiguration'], ['msdyn_rulesetid', 'msdyn_decisionruleset']],
 }
+// columns the fake metadata lists for the customer identification editor ([name, label, type])
+const COLUMNS = {
+  contact: [['statuscode', 'Status Reason', 'Status'], ['statecode', 'Status', 'State'], ['fullname', 'Full Name'], ['firstname', 'First Name'], ['lastname', 'Last Name'], ['emailaddress1', 'Email'], ['mobilephone', 'Mobile Phone'], ['telephone1', 'Business Phone'], ['telephone2', 'Home Phone'], ['telephone3', 'Telephone 3']],
+  account: [['statuscode', 'Status Reason', 'Status'], ['statecode', 'Status', 'State'], ['name', 'Account Name'], ['emailaddress1', 'Email'], ['telephone1', 'Main Phone'], ['telephone2', 'Other Phone'], ['accountnumber', 'Account Number']],
+  incident: [['statuscode', 'Status Reason', 'Status'], ['ticketnumber', 'Case Number'], ['title', 'Case Title']],
+}
 const idField = (entity) => ({ msdyn_ocliveworkstreamcontextvariable: 'msdyn_ocliveworkstreamcontextvariableid' })[entity] ?? `${entity}id`
 
 export async function installFakeHost() {
@@ -70,6 +76,8 @@ export async function installFakeHost() {
       }
       const relationshipMatch = /EntityDefinitions\(LogicalName='(\w+)'\)\/ManyToOneRelationships/.exec(query)
       if (relationshipMatch) return { value: (LOOKUPS[relationshipMatch[1]] ?? []).map(([attr, target]) => ({ ReferencingAttribute: attr, ReferencingEntityNavigationPropertyName: attr, ReferencedEntity: target })) }
+      const columnsMatch = /EntityDefinitions\(LogicalName='(\w+)'\)\/Attributes\?\$select=/.exec(query)
+      if (columnsMatch) return { value: (COLUMNS[columnsMatch[1]] ?? []).map(([name, label, type = 'String']) => ({ LogicalName: name, DisplayName: { UserLocalizedLabel: { Label: label } }, AttributeType: type, AttributeOf: null })) }
       const entitySetMatch = /EntityDefinitions\(LogicalName='(\w+)'\)\?\$select=EntitySetName/.exec(query)
       if (entitySetMatch) return { EntitySetName: entitySetMatch[1] + 's' }
       const key = Object.keys(QUERIES).find((k) => QUERIES[k] === query)

@@ -1,6 +1,6 @@
 {
   "name": "@victorsolaya/pptb-contact-center-map",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "type": "module",
   "displayName": "Contact Center Map",
   "description": "Draw the Dynamics 365 Contact Center configuration: channels, workstreams, routing rules, queues, overflow, operating hours and agents. Export to PNG or Mermaid.",
@@ -42,7 +42,7 @@
     "dist"
   ],
   "scripts": {
-    "test": "node src/i18n.test.mjs && node src/rules.test.mjs && node src/graph.test.mjs && node src/build.test.mjs && node src/pptb.test.mjs && node src/edit.test.mjs && node src/workstream.test.mjs && node src/details.test.mjs",
+    "test": "node src/i18n.test.mjs && node src/rules.test.mjs && node src/graph.test.mjs && node src/build.test.mjs && node src/pptb.test.mjs && node src/edit.test.mjs && node src/workstream.test.mjs && node src/details.test.mjs && node src/identification.test.mjs",
     "dev": "vite",
     "build": "vite build"
   },
