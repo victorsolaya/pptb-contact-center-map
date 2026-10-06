@@ -124,6 +124,11 @@ const problemText = (problem, t) => {
   return typeof message === 'function' ? message(problem.detail) : message
 }
 const conditionsOf = (rule) => rule.matches.flatMap((match) => match.conditions)
+// "contact#1", "contact#2"...: pairs the tables before and after a change by entity, not by position
+const withKeys = (tables) => {
+  const seen = {}
+  return tables.map((table) => ({ ...table, key: `${table.entity}#${(seen[table.entity] = (seen[table.entity] ?? 0) + 1)}` }))
+}
 const editableCopy = (xml) => parseIdentification(xml).map((rule) => ({ preferred: rule.preferred, matches: structuredClone(rule.matches) }))
 
 // The workstream's record identification rules, edited visually (column = value matches per table and
@@ -138,7 +143,7 @@ export function IdentificationDialog({ workstream, raw, org, env, busy, error, o
   const [columns, setColumns] = useState({}) // table -> [{ name, label }] | 'error'
   const [step, setStep] = useState('form')
   const rules = parseIdentification(base)
-  const tables = rules.map((rule) => rule.entity).join()
+  const tables = rules.filter((rule) => rule.supported).map((rule) => rule.entity).join() // editable tables, whose columns are listed
 
   useEffect(() => {
     let live = true
@@ -157,19 +162,24 @@ export function IdentificationDialog({ workstream, raw, org, env, busy, error, o
     .map(({ value, source }) => ({ value, source }))]
   const visualNext = rewriteIdentification(base, edited)
   const next = view === 'xml' ? draft : visualNext
-  const problem = view === 'xml' ? xmlProblem(draft) ?? parserProblem(draft) : null
-  const isValid = view === 'xml'
-    ? !problem
-    : rules.every((rule, i) => !rule.supported || JSON.stringify(edited[i].matches) === JSON.stringify(rule.matches)
-      || (conditionsOf(edited[i]).some(isConversationValue)
-        && conditionsOf(edited[i]).every((condition) => condition.attribute && (!takesValue(condition.operator) || (condition.value ?? '') !== ''))))
+  // rows of the visual tab: a changed table keeps a conversation value, and every row is complete
+  const rowsValid = rules.every((rule, i) => !rule.supported || JSON.stringify(edited[i].matches) === JSON.stringify(rule.matches)
+    || (conditionsOf(edited[i]).some(isConversationValue)
+      && conditionsOf(edited[i]).every((condition) => condition.attribute && (!takesValue(condition.operator) || (condition.value ?? '') !== ''))))
+  // what would be saved must pass the XML checks too, whichever tab produced it (e.g. two preferred tables)
+  const problem = view === 'xml' ? xmlProblem(draft) ?? parserProblem(draft) : xmlProblem(visualNext)
+  const isValid = !problem && (view === 'xml' || rowsValid)
   // only formatting differs (e.g. after looking at the FetchXML view): nothing to save
   const isUnchanged = next === before || formatXml(next) === formatXml(before)
   const close = () => !busy && onClose()
   const setRule = (index, patch) => setEdited((current) => current.map((rule, i) => (i === index ? { ...rule, ...patch } : rule)))
   const prefer = (index) => setEdited((current) => current.map((rule, i) => (rule.preferred === null ? rule : { ...rule, preferred: i === index })))
   const showXml = () => { setDraft(formatXml(visualNext)); setView('xml') }
-  const showVisual = () => { setBase(draft); setEdited(editableCopy(draft)); setView('visual') }
+  const showVisual = () => {
+    // nothing edited in the XML: keep the original text (and its formatting) under the visual edits
+    if (formatXml(draft) !== formatXml(visualNext)) { setBase(draft); setEdited(editableCopy(draft)) }
+    setView('visual')
+  }
 
   if (!before.trim())
     return (
@@ -186,7 +196,7 @@ export function IdentificationDialog({ workstream, raw, org, env, busy, error, o
         </>}>
         <div className="seg ident-tabs" role="tablist">
           <button role="tab" aria-selected={view === 'visual'} className={view === 'visual' ? 'on' : ''} disabled={view === 'xml' && Boolean(problem)} onClick={() => view === 'xml' && showVisual()}>{t.edit.identVisual}</button>
-          <button role="tab" aria-selected={view === 'xml'} className={view === 'xml' ? 'on' : ''} onClick={() => view === 'visual' && showXml()}>{t.edit.identXml}</button>
+          <button role="tab" aria-selected={view === 'xml'} className={view === 'xml' ? 'on' : ''} disabled={view === 'visual' && !rowsValid} onClick={() => view === 'visual' && showXml()}>{t.edit.identXml}</button>
         </div>
         {view === 'xml' ? (
           <>
@@ -201,13 +211,14 @@ export function IdentificationDialog({ workstream, raw, org, env, busy, error, o
               <RuleCard key={i} rule={rule} edited={edited[i]} columns={columns[rule.entity]} options={optionsFor(edited[i])} t={t}
                 onChange={(matches) => setRule(i, { matches })} onPrefer={() => prefer(i)} />
             ))}
-            {!isValid && <p className="err">{t.edit.identNeedMatch}</p>}
+            {!rowsValid && <p className="err">{t.edit.identNeedMatch}</p>}
+            {problem && <p className="err">{problemText(problem, t)}</p>}
           </>
         )}
       </Modal>
     )
-  const tablesBefore = describeIdentification(before, t)
-  const tablesAfter = describeIdentification(next, t)
+  const tablesBefore = withKeys(describeIdentification(before, t))
+  const tablesAfter = withKeys(describeIdentification(next, t))
   const xmlChanges = lineDiff(formatXml(before), formatXml(next))
   return (
     <Modal tone="details" title={t.edit.identTitle(workstream.label)} subtitle={t.types.workstream} onClose={close}
@@ -218,9 +229,12 @@ export function IdentificationDialog({ workstream, raw, org, env, busy, error, o
       </>}>
       <p className="preview">{t.edit.identConfirm}</p>
       <ul className="records changes ident-review">
-        {Array.from({ length: Math.max(tablesBefore.length, tablesAfter.length) }, (_, i) => (
-          <TableChanges key={i} before={tablesBefore[i] ?? { title: tablesAfter[i].title, lines: [], xml: '' }} after={tablesAfter[i] ?? { ...tablesBefore[i], lines: [], xml: '' }} t={t} />
-        ))}
+        {[...tablesAfter, ...tablesBefore.filter((table) => !tablesAfter.some((other) => other.key === table.key))].map(({ key }) => {
+          const old = tablesBefore.find((table) => table.key === key)
+          const now = tablesAfter.find((table) => table.key === key)
+          // an added table has no old lines, a removed one no new lines
+          return <TableChanges key={key} before={old ?? { ...now, lines: [], xml: '' }} after={now ?? { ...old, lines: [], xml: '' }} t={t} />
+        })}
       </ul>
       <details className="xml-diff">
         <summary>{t.edit.identXmlChanges(xmlChanges.length)}</summary>

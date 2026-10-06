@@ -89,8 +89,8 @@ button:hover { background: var(--hover); }
 .sec .act { color: var(--text); font-weight: 600; }
 .kind { display: inline-block; color: #fff; font-size: 10px; padding: 0 6px; border-radius: 4px; }
 
-.detail { width: 340px; max-width: 70vw; flex: none; box-sizing: border-box; padding: 12px; border-left: 1px solid var(--border); background: var(--panel); overflow: auto; position: relative; }
-.detail-resizer { position: absolute; top: 0; bottom: 0; left: 0; width: 6px; cursor: col-resize; z-index: 6; }
+.detail { width: 340px; max-width: max(280px, min(70vw, calc(100vw - 540px))); flex: none; box-sizing: border-box; padding: 12px; border-left: 1px solid var(--border); background: var(--panel); overflow: auto; position: relative; }
+.detail-resizer { position: absolute; top: 0; bottom: 0; left: 0; width: 6px; cursor: col-resize; z-index: 6; touch-action: none; }
 .detail-resizer:hover, .detail-resizer:focus-visible, body.resizing .detail-resizer { background: #2563eb55; outline: none; }
 body.resizing { cursor: col-resize; user-select: none; }
 .detail h2 { font-size: 15px; margin: 6px 0; word-break: break-word; }

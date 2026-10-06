@@ -40,18 +40,21 @@ function saveDetailWidth(width) {
 }
 function startResize(e, startWidth, setWidth) {
   e.preventDefault()
+  e.currentTarget.setPointerCapture?.(e.pointerId) // keep receiving the moves (touch and pen included)
   const startX = e.clientX
   let width = startWidth
   const move = (ev) => setWidth((width = clampWidth(startWidth + startX - ev.clientX)))
   const stop = () => {
     window.removeEventListener('pointermove', move)
     window.removeEventListener('pointerup', stop)
+    window.removeEventListener('pointercancel', stop)
     document.body.classList.remove('resizing')
     saveDetailWidth(width)
   }
   document.body.classList.add('resizing')
   window.addEventListener('pointermove', move)
   window.addEventListener('pointerup', stop)
+  window.addEventListener('pointercancel', stop)
 }
 
 export default function App() {
@@ -226,7 +229,7 @@ export default function App() {
           <div className="detail-resizer" role="separator" aria-orientation="vertical" aria-label={t.text.resizePanel} title={t.text.resizePanel} tabIndex={0}
             onPointerDown={(e) => startResize(e, detailWidth, setDetailWidth)}
             onKeyDown={(e) => { const step = { ArrowLeft: 24, ArrowRight: -24 }[e.key]; if (step) { e.preventDefault(); setDetailWidth((width) => saveDetailWidth(clampWidth(width + step))) } }} />
-          <button className="collapse-panel" title={t.text.minimize(panelName)} aria-label={t.text.minimize(panelName)} onClick={() => setDetailCollapsed(true)}>›</button>
+          <button className="collapse-panel" title={t.text.minimize(panelName)} aria-label={t.text.minimize(panelName)} disabled={Boolean(selected) && editingId === selected.id} onClick={() => setDetailCollapsed(true)}>›</button>
           {!selected ? <p className="muted detail-empty">{t.text.noSelection}</p> : (
             <>
               <button className="close" title={t.text.clearSelection} aria-label={t.text.clearSelection} onClick={() => setSelectedId(null)}>×</button>

@@ -57,9 +57,11 @@ function readFilter(entity) {
 // One entry per <RecordIdentificationRule>, with the positions needed to rewrite it in place.
 export function parseIdentification(xml) {
   const text = normalizeNewlines(xml)
-  return [...text.matchAll(RULE)].map((ruleMatch) => {
-    const ruleXml = ruleMatch[0]
+  // comments blanked with spaces of the same length, so positions still match the real text
+  const live = text.replace(/<!--[\s\S]*?-->/g, (comment) => ' '.repeat(comment.length))
+  return [...live.matchAll(RULE)].map((ruleMatch) => {
     const start = ruleMatch.index
+    const ruleXml = text.slice(start, start + ruleMatch[0].length)
     const rule = parseXml(ruleXml).children[0]
     const entity = rule.children.find((child) => child.tag === 'fetch')?.children.find((child) => child.tag === 'entity')
     const contextKey = rule.children.find((child) => child.tag === 'ContextKey')
@@ -151,6 +153,7 @@ export function describeIdentification(xml, t) {
   return parseIdentification(xml).map((rule) => {
     const table = t.text.identTables[rule.entity] ?? rule.entity
     return {
+      entity: rule.entity,
       title: rule.preferred ? `${table} (${t.text.preferred})` : table,
       xml: formatXml(rule.xml), // to tell an edited advanced rule from an untouched one
       lines: rule.supported ? rule.matches.map((match) => matchText(match, t)) : [t.text.identAdvanced],
@@ -164,11 +167,14 @@ export const summarizeIdentification = (xml, t) =>
 
 // ---------------------------------------------------------------- FetchXML view for developers
 
+// Comment, tag (quoted attribute values may contain ">") or text; an unclosed "<" is its own token.
+const TOKEN = /<!--[\s\S]*?-->|<(?:"[^"]*"|'[^']*'|[^'">])*>|<[^<]*|[^<]+/g
+
 // One tag per line, indented two spaces per level (the column usually comes as one line with tabs).
 export function formatXml(xml) {
   const lines = []
   let depth = 0
-  for (const [token] of normalizeNewlines(xml).matchAll(/<!--[\s\S]*?-->|<[^>]*>|[^<]+/g)) {
+  for (const [token] of normalizeNewlines(xml).matchAll(TOKEN)) {
     const text = token.trim()
     if (!text) continue
     if (text.startsWith('</')) depth = Math.max(0, depth - 1)
@@ -183,7 +189,7 @@ export function formatXml(xml) {
 export function xmlProblem(xml) {
   const open = []
   let roots = 0
-  for (const [token] of normalizeNewlines(xml).matchAll(/<!--[\s\S]*?-->|<[^>]*>?|[^<]+/g)) {
+  for (const [token] of normalizeNewlines(xml).matchAll(TOKEN)) {
     if (!token.startsWith('<')) {
       if (token.trim() && !open.length) return { code: 'notWellFormed', detail: token.trim().slice(0, 60) }
       continue
@@ -206,6 +212,12 @@ export function xmlProblem(xml) {
   const has = (node, tag) => node.children.find((child) => child.tag === tag)
   const incomplete = rules.findIndex((rule) => !has(rule, 'PrimaryEntity') || !has(has(rule, 'fetch') ?? { children: [] }, 'entity')?.attrs.name || !has(rule, 'ContextKey')?.attrs.name)
   if (incomplete >= 0) return { code: 'ruleIncomplete', detail: incomplete + 1 }
+  const conditionsOf = (node) => node.children.flatMap((child) => (child.tag === 'condition' ? [child] : conditionsOf(child)))
+  const conditionsByRule = rules.map((rule) => conditionsOf(has(has(rule, 'fetch'), 'entity')))
+  const unfiltered = conditionsByRule.findIndex((conditions) => !conditions.length)
+  if (unfiltered >= 0) return { code: 'noConditions', detail: unfiltered + 1 } // it would match every record
+  const columnless = conditionsByRule.findIndex((conditions) => conditions.some((condition) => !condition.attrs.attribute?.trim()))
+  if (columnless >= 0) return { code: 'conditionWithoutColumn', detail: columnless + 1 }
   if (rules.filter((rule) => has(rule, 'ContextKey').attrs.isPreferred?.toLowerCase() === 'true').length > 1) return { code: 'twoPreferred' }
   return null
 }

@@ -1,10 +1,12 @@
 // Parser for Dataverse decision-ruleset XML: <decision><rules><rule><logical|condition/><action/></rule></rules></decision>
 // Machine-generated XML with no CDATA/namespaces, so a regex tokenizer is enough.
 
+// one pass, so a decoded "&" can't start another reference ("&#38;amp;" is "&amp;")
+const ENTITIES = { lt: '<', gt: '>', quot: '"', apos: "'", amp: '&' }
 const decode = (text) =>
-  text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16))).replace(/&#(\d+);/g, (_, decimal) => String.fromCodePoint(Number(decimal)))
-    .replace(/&amp;/g, '&')
+  text.replace(/&(lt|gt|quot|apos|amp|#\d+|#x[0-9a-f]+);/gi, (reference, name) =>
+    name[0] !== '#' ? ENTITIES[name.toLowerCase()] ?? reference
+    : String.fromCodePoint(name[1].toLowerCase() === 'x' ? parseInt(name.slice(2), 16) : Number(name.slice(1))))
 
 export function parseXml(xml) {
   const root = { tag: '#root', attrs: {}, children: [], text: '' }

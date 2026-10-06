@@ -40,6 +40,7 @@ const en = {
     identVisual: 'Visual', identXml: 'FetchXML', identXmlHint: 'The whole column, formatted. Every table can be edited here, including advanced ones. It is checked before you can review it.',
     identXmlChanges: (n) => `XML changes (${n} ${n === 1 ? 'line' : 'lines'})`,
     identXmlProblems: {
+      noConditions: (n) => `Rule ${n} has no condition: it would match every record of its table.`, conditionWithoutColumn: (n) => `Rule ${n} has a condition without a column (attribute).`,
       notWellFormed: (near) => `The XML is not well formed near: ${near}`, noRuleSet: 'The root element must be <RecordIdentificationRuleSet>.',
       noRules: 'Add at least one <RecordIdentificationRule>.', ruleIncomplete: (n) => `Rule ${n} needs <PrimaryEntity>, <fetch><entity name="…"> and <ContextKey name="…">.`,
       twoPreferred: 'Only one table can have isPreferred="true".',
@@ -135,6 +136,7 @@ const es = {
     identVisual: 'Visual', identXml: 'FetchXML', identXmlHint: 'La columna completa, formateada. Aquí se puede editar cualquier tabla, también las avanzadas. Se comprueba antes de poder revisarla.',
     identXmlChanges: (n) => `Cambios en el XML (${n} ${n === 1 ? 'línea' : 'líneas'})`,
     identXmlProblems: {
+      noConditions: (n) => `La regla ${n} no tiene ninguna condición: coincidiría con todos los registros de su tabla.`, conditionWithoutColumn: (n) => `La regla ${n} tiene una condición sin columna (attribute).`,
       notWellFormed: (near) => `El XML no está bien formado cerca de: ${near}`, noRuleSet: 'El elemento raíz debe ser <RecordIdentificationRuleSet>.',
       noRules: 'Añade al menos un <RecordIdentificationRule>.', ruleIncomplete: (n) => `La regla ${n} necesita <PrimaryEntity>, <fetch><entity name="…"> y <ContextKey name="…">.`,
       twoPreferred: 'Solo una tabla puede tener isPreferred="true".',
@@ -230,6 +232,7 @@ const pt = {
     identVisual: 'Visual', identXml: 'FetchXML', identXmlHint: 'A coluna inteira, formatada. Aqui é possível editar qualquer tabela, inclusive as avançadas. Ela é verificada antes da revisão.',
     identXmlChanges: (n) => `Alterações no XML (${n} ${n === 1 ? 'linha' : 'linhas'})`,
     identXmlProblems: {
+      noConditions: (n) => `A regra ${n} não tem nenhuma condição: corresponderia a todos os registros da tabela.`, conditionWithoutColumn: (n) => `A regra ${n} tem uma condição sem coluna (attribute).`,
       notWellFormed: (near) => `O XML não está bem formado perto de: ${near}`, noRuleSet: 'O elemento raiz deve ser <RecordIdentificationRuleSet>.',
       noRules: 'Adicione pelo menos um <RecordIdentificationRule>.', ruleIncomplete: (n) => `A regra ${n} precisa de <PrimaryEntity>, <fetch><entity name="…"> e <ContextKey name="…">.`,
       twoPreferred: 'Apenas uma tabela pode ter isPreferred="true".',
@@ -325,6 +328,7 @@ const fr = {
     identVisual: 'Visuel', identXml: 'FetchXML', identXmlHint: 'La colonne entière, mise en forme. Toutes les tables peuvent être modifiées ici, y compris les avancées. Elle est vérifiée avant de pouvoir être revue.',
     identXmlChanges: (n) => `Modifications du XML (${n} ${n === 1 ? 'ligne' : 'lignes'})`,
     identXmlProblems: {
+      noConditions: (n) => `La règle ${n} n’a aucune condition : elle correspondrait à tous les enregistrements de sa table.`, conditionWithoutColumn: (n) => `La règle ${n} a une condition sans colonne (attribute).`,
       notWellFormed: (near) => `Le XML n’est pas bien formé près de : ${near}`, noRuleSet: 'L’élément racine doit être <RecordIdentificationRuleSet>.',
       noRules: 'Ajoutez au moins un <RecordIdentificationRule>.', ruleIncomplete: (n) => `La règle ${n} doit contenir <PrimaryEntity>, <fetch><entity name="…"> et <ContextKey name="…">.`,
       twoPreferred: 'Une seule table peut avoir isPreferred="true".',
@@ -420,6 +424,7 @@ const de = {
     identVisual: 'Visuell', identXml: 'FetchXML', identXmlHint: 'Die ganze Spalte, formatiert. Hier lässt sich jede Tabelle bearbeiten, auch die erweiterten. Sie wird vor der Prüfung kontrolliert.',
     identXmlChanges: (n) => `Änderungen im XML (${n} ${n === 1 ? 'Zeile' : 'Zeilen'})`,
     identXmlProblems: {
+      noConditions: (n) => `Regel ${n} hat keine Bedingung: Sie würde auf alle Datensätze ihrer Tabelle passen.`, conditionWithoutColumn: (n) => `Regel ${n} hat eine Bedingung ohne Spalte (attribute).`,
       notWellFormed: (near) => `Das XML ist nicht wohlgeformt bei: ${near}`, noRuleSet: 'Das Wurzelelement muss <RecordIdentificationRuleSet> sein.',
       noRules: 'Füge mindestens ein <RecordIdentificationRule> hinzu.', ruleIncomplete: (n) => `Regel ${n} braucht <PrimaryEntity>, <fetch><entity name="…"> und <ContextKey name="…">.`,
       twoPreferred: 'Nur eine Tabelle darf isPreferred="true" haben.',
@@ -515,6 +520,7 @@ const it = {
     identVisual: 'Visuale', identXml: 'FetchXML', identXmlHint: 'L’intera colonna, formattata. Qui si può modificare qualsiasi tabella, anche quelle avanzate. Viene controllata prima di poterla rivedere.',
     identXmlChanges: (n) => `Modifiche all’XML (${n} ${n === 1 ? 'riga' : 'righe'})`,
     identXmlProblems: {
+      noConditions: (n) => `La regola ${n} non ha condizioni: corrisponderebbe a tutti i record della sua tabella.`, conditionWithoutColumn: (n) => `La regola ${n} ha una condizione senza colonna (attribute).`,
       notWellFormed: (near) => `L’XML non è ben formato vicino a: ${near}`, noRuleSet: 'L’elemento radice deve essere <RecordIdentificationRuleSet>.',
       noRules: 'Aggiungi almeno un <RecordIdentificationRule>.', ruleIncomplete: (n) => `La regola ${n} richiede <PrimaryEntity>, <fetch><entity name="…"> e <ContextKey name="…">.`,
       twoPreferred: 'Solo una tabella può avere isPreferred="true".',

@@ -127,6 +127,21 @@ assert.equal(xmlProblem(sample.replace('name="contact"', "name='contact'")), nul
 assert.deepEqual(lineDiff('a\nb\nc', 'a\nc\nd'), [{ type: '-', text: 'b' }, { type: '+', text: 'd' }])
 assert.deepEqual(lineDiff(pretty, pretty), [])
 
+// a whole rule commented out at rule-set level is not a rule, and positions still point at the real text
+const ruleSetComment = sample.replace('<RecordIdentificationRuleSet>', '<RecordIdentificationRuleSet><!--<RecordIdentificationRule><fetch><entity name="lead"><filter type="and"/></entity></fetch><ContextKey name="x" isPreferred="true"/></RecordIdentificationRule>-->')
+assert.deepEqual(parseIdentification(ruleSetComment).map((rule) => rule.entity), ['account', 'contact', 'incident'])
+assert.ok(rewriteIdentification(ruleSetComment, edited).includes('<!--<RecordIdentificationRule><fetch><entity name="lead">'), 'the comment is kept')
+assert.deepEqual(meaning(rewriteIdentification(ruleSetComment, edited)), meaning(next))
+// a ">" inside a quoted value is part of the value
+const angle = sample.replace('value="${Email}"/>', 'value="a>b"/>')
+assert.equal(xmlProblem(angle), null)
+assert.ok(formatXml(angle).includes('value="a>b"/>'))
+// "&#38;amp;" is decoded once, to "&amp;"
+assert.equal(parseIdentification(sample.replace('value="1"/>\t\t\t\t<condition attribute="fullname"', 'value="&#38;amp;"/>\t\t\t\t<condition attribute="fullname"'))[1].matches[0].conditions[0].value, '&amp;')
+// a table with no condition would match every record; a condition needs a column
+assert.deepEqual(xmlProblem(rewriteIdentification(sample, edited.map((rule, i) => (i === 0 ? { ...rule, matches: [] } : rule)))), { code: 'noConditions', detail: 1 })
+assert.deepEqual(xmlProblem(sample.replace('attribute="fullname"', 'attribute=""')), { code: 'conditionWithoutColumn', detail: 2 })
+
 // optimistic write
 store['ws-1'] = sample.replace(/\n/g, '\r\n')
 await writeIdentification('ws-1', sample, next)
