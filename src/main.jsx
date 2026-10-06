@@ -3,4 +3,6 @@ import '@xyflow/react/dist/style.css'
 import './styles.css'
 import App from './App.jsx'
 
-createRoot(document.getElementById('root')).render(<App />)
+// `npm run dev` with ?fakehost: simulated ToolBox host (dev only, removed from the published build).
+const boot = import.meta.env.DEV && location.search.includes('fakehost') ? import('./devhost.js').then((devhost) => devhost.installFakeHost()) : Promise.resolve()
+boot.then(() => createRoot(document.getElementById('root')).render(<App />))

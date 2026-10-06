@@ -20,29 +20,29 @@ export const TYPES = {
 // only the queues/rules/workstreams that can reach that user, not every other user.
 export function neighborhood(graph, focusId, { hideTypes = [] } = {}) {
   const hidden = new Set(hideTypes)
-  const out = new Map(), inc = new Map()
-  for (const e of graph.edges) {
-    ;(out.get(e.source) ?? out.set(e.source, []).get(e.source)).push(e)
-    ;(inc.get(e.target) ?? inc.set(e.target, []).get(e.target)).push(e)
+  const outgoing = new Map(), incoming = new Map()
+  for (const edge of graph.edges) {
+    ;(outgoing.get(edge.source) ?? outgoing.set(edge.source, []).get(edge.source)).push(edge)
+    ;(incoming.get(edge.target) ?? incoming.set(edge.target, []).get(edge.target)).push(edge)
   }
-  const byId = new Map(graph.nodes.map((n) => [n.id, n]))
+  const byId = new Map(graph.nodes.map((node) => [node.id, node]))
   const keep = new Set([focusId])
-  const walk = (adj, next) => {
+  const walk = (adjacency, nextId) => {
     const stack = [focusId]
     while (stack.length) {
-      for (const e of adj.get(stack.pop()) ?? []) {
-        const id = next(e)
+      for (const edge of adjacency.get(stack.pop()) ?? []) {
+        const id = nextId(edge)
         if (keep.has(id) || hidden.has(byId.get(id)?.type)) continue
         keep.add(id)
         stack.push(id)
       }
     }
   }
-  walk(out, (e) => e.target)
-  walk(inc, (e) => e.source)
+  walk(outgoing, (edge) => edge.target)
+  walk(incoming, (edge) => edge.source)
   return {
-    nodes: graph.nodes.filter((n) => keep.has(n.id)),
-    edges: graph.edges.filter((e) => keep.has(e.source) && keep.has(e.target)),
+    nodes: graph.nodes.filter((node) => keep.has(node.id)),
+    edges: graph.edges.filter((edge) => keep.has(edge.source) && keep.has(edge.target)),
   }
 }
 
@@ -58,68 +58,68 @@ export const SECTIONS = [
 // rules (ruleset -> rules -> overflow action) and its agents. Hours are also folded into channels.
 // No shared nodes, so no edges cross between queues. keepId (the focused node) is never folded away.
 export function foldIntoQueues({ nodes, edges }, keepId, t = LANGS.en) {
-  const byId = new Map(nodes.map((n) => [n.id, n]))
-  const out = new Map()
-  for (const e of edges) (out.get(e.source) ?? out.set(e.source, []).get(e.source)).push(e)
-  const into = new Map()
-  const slot = (q) => into.get(q) ?? into.set(q, { hours: [], pre: [], in: [], members: [] }).get(q)
+  const byId = new Map(nodes.map((node) => [node.id, node]))
+  const outgoing = new Map()
+  for (const edge of edges) (outgoing.get(edge.source) ?? outgoing.set(edge.source, []).get(edge.source)).push(edge)
+  const sectionsByQueue = new Map()
+  const sectionsOf = (queueId) => sectionsByQueue.get(queueId) ?? sectionsByQueue.set(queueId, { hours: [], pre: [], in: [], members: [] }).get(queueId)
   const folded = new Set(), dropped = new Set(), added = []
 
-  for (const e of edges) {
-    const q = byId.get(e.source), n = byId.get(e.target)
-    if (!q || !n || n.id === keepId) continue
-    if (e.kind === 'hours') {
-      slot(q.id).hours.push(n)
-      folded.add(n.id)
-      dropped.add(e)
-    } else if (q.type !== 'queue') continue
-    else if (e.kind === 'member') {
-      slot(q.id).members.push(n)
-      folded.add(n.id)
-      dropped.add(e)
-    } else if (e.kind === 'pre' || e.kind === 'in') {
-      const ruleEdges = out.get(n.id) ?? []
-      const rules = ruleEdges.map((re) => byId.get(re.target)).filter(Boolean)
-      const targetEdges = rules.flatMap((r) => out.get(r.id) ?? [])
-      if ([...rules.map((r) => r.id), ...targetEdges.map((te) => te.target)].includes(keepId)) continue
-      const which = e.kind
-      slot(q.id)[which].push(...rules.map((r) => ({ ...r, targets: (out.get(r.id) ?? []).map((te) => byId.get(te.target)).filter(Boolean) })))
-      for (const x of [e, ...ruleEdges, ...targetEdges]) dropped.add(x)
-      for (const id of [n.id, ...rules.map((r) => r.id), ...targetEdges.map((te) => te.target)]) folded.add(id)
+  for (const edge of edges) {
+    const source = byId.get(edge.source), target = byId.get(edge.target)
+    if (!source || !target || target.id === keepId) continue
+    if (edge.kind === 'hours') {
+      sectionsOf(source.id).hours.push(target)
+      folded.add(target.id)
+      dropped.add(edge)
+    } else if (source.type !== 'queue') continue
+    else if (edge.kind === 'member') {
+      sectionsOf(source.id).members.push(target)
+      folded.add(target.id)
+      dropped.add(edge)
+    } else if (edge.kind === 'pre' || edge.kind === 'in') {
+      const ruleEdges = outgoing.get(target.id) ?? []
+      const rules = ruleEdges.map((ruleEdge) => byId.get(ruleEdge.target)).filter(Boolean)
+      const targetEdges = rules.flatMap((rule) => outgoing.get(rule.id) ?? [])
+      if ([...rules.map((rule) => rule.id), ...targetEdges.map((targetEdge) => targetEdge.target)].includes(keepId)) continue
+      const section = edge.kind
+      sectionsOf(source.id)[section].push(...rules.map((rule) => ({ ...rule, targets: (outgoing.get(rule.id) ?? []).map((targetEdge) => byId.get(targetEdge.target)).filter(Boolean) })))
+      for (const foldedEdge of [edge, ...ruleEdges, ...targetEdges]) dropped.add(foldedEdge)
+      for (const id of [target.id, ...rules.map((rule) => rule.id), ...targetEdges.map((targetEdge) => targetEdge.target)]) folded.add(id)
       // an overflow action that points somewhere else (e.g. transfer to another queue) keeps that hop
-      for (const te of targetEdges)
-        for (const fe of out.get(te.target) ?? []) {
-          dropped.add(fe)
-          added.push({ source: q.id, target: fe.target, kind: fe.kind, label: `${t.sections[which]}: ${fe.label ?? ''}`.trim() })
+      for (const targetEdge of targetEdges)
+        for (const onwardEdge of outgoing.get(targetEdge.target) ?? []) {
+          dropped.add(onwardEdge)
+          added.push({ source: source.id, target: onwardEdge.target, kind: onwardEdge.kind, label: `${t.sections[section]}: ${onwardEdge.label ?? ''}`.trim() })
         }
     }
   }
-  const keep = [...edges.filter((e) => !dropped.has(e)), ...added]
-  const linked = new Set(keep.flatMap((e) => [e.source, e.target]))
+  const keep = [...edges.filter((edge) => !dropped.has(edge)), ...added]
+  const linked = new Set(keep.flatMap((edge) => [edge.source, edge.target]))
   return {
     nodes: nodes
-      .filter((n) => !folded.has(n.id) || linked.has(n.id) || n.id === keepId)
-      .map((n) => {
-        const s = into.get(n.id)
-        if (!s) return n
-        s.members.sort((a, b) => a.label.localeCompare(b.label))
-        return { ...n, ...Object.fromEntries(Object.entries(s).filter(([, v]) => v.length)) }
+      .filter((node) => !folded.has(node.id) || linked.has(node.id) || node.id === keepId)
+      .map((node) => {
+        const sections = sectionsByQueue.get(node.id)
+        if (!sections) return node
+        sections.members.sort((a, b) => a.label.localeCompare(b.label))
+        return { ...node, ...Object.fromEntries(Object.entries(sections).filter(([, v]) => v.length)) }
       }),
     edges: keep,
   }
 }
 
-const mid = (id) => 'n' + id.replace(/[^a-zA-Z0-9]/g, '')
-const mtxt = (s) => String(s ?? '').replace(/"/g, "'")
+const mermaidId = (id) => 'n' + id.replace(/[^a-zA-Z0-9]/g, '')
+const mermaidText = (text) => String(text ?? '').replace(/"/g, "'")
 
 export function toMermaid({ nodes, edges }, t = LANGS.en) {
   const lines = ['flowchart LR']
-  for (const n of nodes) {
-    const extra = SECTIONS.filter(([k]) => n[k]).map(([k]) =>
-      `<br/><b>${t.sections[k]}</b>` + n[k].map((x) => `<br/>· ${mtxt(x.targets ? `${x.sub} → ${x.targets.map((a) => [a.label, a.sub].filter(Boolean).join(' ')).join(', ')}` : x.label)}`).join(''))
-    lines.push(`  ${mid(n.id)}["${mtxt(t.types[n.type] ?? n.type)}: ${mtxt(n.label)}${extra.join('')}"]:::${n.type}`)
+  for (const node of nodes) {
+    const extra = SECTIONS.filter(([section]) => node[section]).map(([section]) =>
+      `<br/><b>${t.sections[section]}</b>` + node[section].map((item) => `<br/>- ${mermaidText(item.targets ? `${item.sub} → ${item.targets.map((target) => [target.label, target.sub].filter(Boolean).join(' ')).join(', ')}` : item.label)}`).join(''))
+    lines.push(`  ${mermaidId(node.id)}["${mermaidText(t.types[node.type] ?? node.type)}: ${mermaidText(node.label)}${extra.join('')}"]:::${node.type}`)
   }
-  for (const e of edges) lines.push(`  ${mid(e.source)} -->${e.label ? `|"${mtxt(e.label)}"|` : ''} ${mid(e.target)}`)
+  for (const edge of edges) lines.push(`  ${mermaidId(edge.source)} -->${edge.label ? `|"${mermaidText(edge.label)}"|` : ''} ${mermaidId(edge.target)}`)
   for (const [k, v] of Object.entries(TYPES)) lines.push(`  classDef ${k} fill:${v.color}22,stroke:${v.color}`)
   return lines.join('\n')
 }
