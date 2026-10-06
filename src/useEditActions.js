@@ -3,6 +3,7 @@ import { loadFromPptb, notify } from './pptb.js'
 import { addMember, removeMember, createQueue, deleteQueue, appendRule, removeRule, buildRuleXml, writeRuleset, errorText, MEMBER_TABLES, QUEUE_TABLES, RULE_TABLES } from './edit.js'
 import { runSteps, undoAll, DETAIL_TABLES } from './details.js'
 import { createWorkstream, deleteCreated, WORKSTREAM_TABLES } from './workstream.js'
+import { writeIdentification, IDENTIFICATION_TABLES } from './identification.js'
 import { normGuid } from './rules.js'
 
 // Edit mode: the open dialog, the change being written and how it ended (error in the dialog, or a
@@ -96,6 +97,15 @@ export function useEditActions({ snapshot, setSnapshot, t, focus, setEditingId }
       return retryingUndo(undos, undoAll, DETAIL_TABLES[node.type], 'notReverted')
     }, t.edit.saved(plan.changes.find((change) => /^(msdyn_)?name$/.test(change.col))?.to ?? node.label))
 
+  // Record identification rules: the whole column is written, after checking nobody changed it; undo writes it back.
+  const applyIdentification = (workstream, before, next) =>
+    perform(async () => {
+      const workstreamId = workstream.id.split(':')[1]
+      await writeIdentification(workstreamId, before, next)
+      await refreshTables(IDENTIFICATION_TABLES)
+      return async () => { await writeIdentification(workstreamId, next, before); await refreshTables(IDENTIFICATION_TABLES) }
+    }, t.edit.identSaved(workstream.label))
+
   async function undo() {
     setBusy(true)
     try {
@@ -110,6 +120,6 @@ export function useEditActions({ snapshot, setSnapshot, t, focus, setEditingId }
 
   return {
     dialog, setDialog, openDialog, busy, editError, setEditError, toast, setToast, undo,
-    applyMember, applyQueue, applyRule, applyRemoveRule, applyWorkstream, applyDetails,
+    applyMember, applyQueue, applyRule, applyRemoveRule, applyWorkstream, applyDetails, applyIdentification,
   }
 }

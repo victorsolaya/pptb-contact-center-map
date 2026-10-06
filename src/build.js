@@ -2,6 +2,7 @@
 import { parseRules, normGuid, simplify } from './rules.js'
 import { rulesetKind } from './edit.js'
 import { PROFILE_BASED } from './details.js'
+import { summarizeIdentification } from './identification.js'
 import { LANGS } from './i18n.js'
 import { rows, formatted } from './queries.js'
 
@@ -66,6 +67,7 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
       [fields.defaultQueue]: formatted(workstream, '_msdyn_defaultqueue_value'),
       [fields.bot]: formatted(workstream, '_msdyn_bot_user_value'),
       [fields.status]: formatted(workstream, 'statecode'),
+      [fields.identification]: summarizeIdentification(workstream.msdyn_recordidentificationrule, t) || t.text.identNoRules,
     })
   for (const [channelKey, table, nameCol] of CHANNELS)
     for (const channel of rows(raw, channelKey))

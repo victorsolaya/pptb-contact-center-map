@@ -33,6 +33,8 @@ export async function loadFromPptb(keys = Object.keys(QUERIES)) {
 
 const relationshipCache = new Map()
 const entitySetCache = new Map()
+// metadata differs between orgs: forget it when the connection changes
+export const clearMetadataCache = () => { relationshipCache.clear(); entitySetCache.clear() }
 export async function relationships(entity) {
   if (!relationshipCache.has(entity)) {
     const manyToOne = await fetchQuery(`EntityDefinitions(LogicalName='${entity}')/ManyToOneRelationships?$select=ReferencingAttribute,ReferencingEntityNavigationPropertyName,ReferencedEntity`)

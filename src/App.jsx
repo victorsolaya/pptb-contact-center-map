@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { TYPES } from './graph.js'
 import { buildGraph } from './build.js'
-import { inPptb, loadFromPptb, currentTheme } from './pptb.js'
+import { inPptb, loadFromPptb, currentTheme, clearMetadataCache } from './pptb.js'
+import { clearColumnCache } from './identification.js'
 import { recordOf } from './details.js'
 import { LANGS, initialLang, saveLang } from './i18n.js'
 import { Diagram } from './Diagram.jsx'
@@ -13,6 +14,7 @@ import { QueueDialog } from './dialogs/QueueDialog.jsx'
 import { RuleDialog, RemoveRuleDialog } from './dialogs/RuleDialog.jsx'
 import { WorkstreamDialog } from './dialogs/WorkstreamDialog.jsx'
 import { DetailsForm, DetailsDialog } from './dialogs/DetailsDialog.jsx'
+import { IdentificationDialog } from './dialogs/IdentificationDialog.jsx'
 
 // Power Platform ToolBox: the host's active connection. `npm run dev`: dev/raw.json (gitignored,
 // a saved Web API snapshot of a real org). null = nothing to show yet.
@@ -21,6 +23,38 @@ async function loadSnapshot() {
   if (!import.meta.env.DEV) return null // published build: data only ever comes from ToolBox
   const response = await fetch('dev/raw.json')
   return response.ok && response.headers.get('content-type')?.includes('json') ? response.json() : null
+}
+
+// Detail panel width: dragged by its left edge, remembered in this browser (best effort). The panel always
+// opens expanded; minimizing only lasts until another item is picked.
+const WIDTH_KEY = 'ccmap.detailWidth'
+const readSetting = (key) => { try { return localStorage.getItem(key) } catch { return null } }
+const writeSetting = (key, value) => { try { localStorage.setItem(key, value) } catch {} }
+// The upper bound (70% of the window) is CSS max-width: inside ToolBox the tool may start in a hidden
+// frame whose window is 0 px wide, so the window size can't be used to compute the starting width.
+const clampWidth = (width) => Math.round(Math.min(Math.max(width, 280), Math.max(window.innerWidth * 0.7, 280)))
+const initialDetailWidth = () => Math.max(Number(readSetting(WIDTH_KEY)) || 340, 280)
+function saveDetailWidth(width) {
+  writeSetting(WIDTH_KEY, String(width))
+  return width
+}
+function startResize(e, startWidth, setWidth) {
+  e.preventDefault()
+  e.currentTarget.setPointerCapture?.(e.pointerId) // keep receiving the moves (touch and pen included)
+  const startX = e.clientX
+  let width = startWidth
+  const move = (ev) => setWidth((width = clampWidth(startWidth + startX - ev.clientX)))
+  const stop = () => {
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', stop)
+    window.removeEventListener('pointercancel', stop)
+    document.body.classList.remove('resizing')
+    saveDetailWidth(width)
+  }
+  document.body.classList.add('resizing')
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', stop)
+  window.addEventListener('pointercancel', stop)
 }
 
 export default function App() {
@@ -38,14 +72,18 @@ export default function App() {
   const [edit, setEdit] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [editingId, setEditingId] = useState(null) // node whose details are being edited in the detail panel
+  const [detailWidth, setDetailWidth] = useState(initialDetailWidth)
+  const [detailCollapsed, setDetailCollapsed] = useState(false)
   const focus = (id) => { setFocusId(id); setSelectedId(id) }
   const {
     dialog, setDialog, openDialog, busy, editError, setEditError, toast, setToast, undo,
-    applyMember, applyQueue, applyRule, applyRemoveRule, applyWorkstream, applyDetails,
+    applyMember, applyQueue, applyRule, applyRemoveRule, applyWorkstream, applyDetails, applyIdentification,
   } = useEditActions({ snapshot, setSnapshot, t, focus, setEditingId })
 
   useEffect(() => {
     const load = () => {
+      clearMetadataCache()
+      clearColumnCache()
       setSnapshot(undefined)
       setError(null)
       setFocusId(null)
@@ -66,6 +104,7 @@ export default function App() {
   }, [])
 
   useEffect(() => { document.documentElement.lang = lang }, [lang])
+  useEffect(() => setDetailCollapsed(false), [selectedId]) // a newly picked item is always shown
   // after a refresh the focused item may be gone (deleted in the admin center)
   useEffect(() => { if (graph && focusId && !graph.nodes.some((node) => node.id === focusId)) setFocusId(null) }, [graph])
 
@@ -88,6 +127,7 @@ export default function App() {
   if (!graph) return <div className="empty">{inPptb() ? t.text.noConnection : t.text.noData}</div>
   const selected = graph.nodes.find((node) => node.id === selectedId)
   const canEditSelected = edit && selected && recordOf(snapshot.raw, selected)
+  const panelName = selected?.label ?? t.text.detailsPanel
   // re-read everything from the same connection, keeping what is selected and where the map is
   const refresh = () => {
     setEditingId(null) // the form's values would be older than the refreshed map
@@ -178,24 +218,41 @@ export default function App() {
           {toast && <Toast toast={toast} busy={busy} onUndo={undo} onClose={() => setToast(null)} t={t} />}
         </ReactFlowProvider>
       </main>
-      {selected && (
-        <aside className="detail">
-          <button className="close" onClick={() => setSelectedId(null)}>×</button>
-          <div className="kind" style={{ background: TYPES[selected.type]?.color }}>{t.types[selected.type]}</div>
-          <h2>{selected.label}</h2>
-          <div className="detail-actions">
-            {selected.id !== focusId && <button onClick={() => focus(selected.id)}>{t.text.centerHere}</button>}
-            {canEditSelected && editingId !== selected.id && <button className="primary" onClick={() => setEditingId(selected.id)}>✎ {t.edit.editDetails}</button>}
-          </div>
-          {canEditSelected && editingId === selected.id ? (
-            <DetailsForm key={selected.id} node={selected} raw={snapshot.raw} queues={queueOptions} t={t} onCancel={() => setEditingId(null)}
-              onReview={(plan) => openDialog({ kind: 'details', node: selected, plan })} />
-          ) : (
-            <dl>
-              {Object.entries(selected.data ?? {}).filter(([, value]) => value != null && value !== '').map(([label, value]) => (
-                <div key={label}><dt>{label}</dt><dd>{typeof value === 'object' ? JSON.stringify(value, null, 1) : String(value)}</dd></div>
-              ))}
-            </dl>
+      {detailCollapsed ? (
+        <aside className="detail collapsed">
+          <button className="expand-panel" title={t.text.expand(panelName)} aria-label={t.text.expand(panelName)} onClick={() => setDetailCollapsed(false)}>‹</button>
+          {selected && <span className="kind" style={{ background: TYPES[selected.type]?.color }} aria-hidden />}
+          <span className="vertical-label" onClick={() => setDetailCollapsed(false)}>{panelName}</span>
+        </aside>
+      ) : (
+        <aside className="detail" style={{ width: detailWidth }}>
+          <div className="detail-resizer" role="separator" aria-orientation="vertical" aria-label={t.text.resizePanel} title={t.text.resizePanel} tabIndex={0}
+            onPointerDown={(e) => startResize(e, detailWidth, setDetailWidth)}
+            onKeyDown={(e) => { const step = { ArrowLeft: 24, ArrowRight: -24 }[e.key]; if (step) { e.preventDefault(); setDetailWidth((width) => saveDetailWidth(clampWidth(width + step))) } }} />
+          <button className="collapse-panel" title={t.text.minimize(panelName)} aria-label={t.text.minimize(panelName)} disabled={Boolean(selected) && editingId === selected.id} onClick={() => setDetailCollapsed(true)}>›</button>
+          {!selected ? <p className="muted detail-empty">{t.text.noSelection}</p> : (
+            <>
+              <button className="close" title={t.text.clearSelection} aria-label={t.text.clearSelection} onClick={() => setSelectedId(null)}>×</button>
+              <div className="kind" style={{ background: TYPES[selected.type]?.color }}>{t.types[selected.type]}</div>
+              <h2>{selected.label}</h2>
+              <div className="detail-actions">
+                {selected.id !== focusId && <button onClick={() => focus(selected.id)}>{t.text.centerHere}</button>}
+                {canEditSelected && editingId !== selected.id && <button className="primary" onClick={() => setEditingId(selected.id)}>✎ {t.edit.editDetails}</button>}
+                {canEditSelected && selected.type === 'workstream' && editingId !== selected.id && canEditSelected.msdyn_recordidentificationrule?.trim() && (
+                  <button onClick={() => openDialog({ kind: 'identification', workstream: selected })}>✎ {t.edit.identButton}</button>
+                )}
+              </div>
+              {canEditSelected && editingId === selected.id ? (
+                <DetailsForm key={selected.id} node={selected} raw={snapshot.raw} queues={queueOptions} t={t} onCancel={() => setEditingId(null)}
+                  onReview={(plan) => openDialog({ kind: 'details', node: selected, plan })} />
+              ) : (
+                <dl>
+                  {Object.entries(selected.data ?? {}).filter(([, value]) => value != null && value !== '').map(([label, value]) => (
+                    <div key={label}><dt>{label}</dt><dd>{typeof value === 'object' ? JSON.stringify(value, null, 1) : String(value)}</dd></div>
+                  ))}
+                </dl>
+              )}
+            </>
           )}
         </aside>
       )}
@@ -215,6 +272,10 @@ export default function App() {
       {dialog?.kind === 'details' && (
         <DetailsDialog node={dialog.node} plan={dialog.plan} raw={snapshot.raw} queues={queueOptions} {...dialogProps}
           onApply={() => applyDetails(dialog.node, dialog.plan)} onBack={() => setDialog(null)} onClose={() => { setDialog(null); setEditingId(null) }} />
+      )}
+      {dialog?.kind === 'identification' && (
+        <IdentificationDialog workstream={dialog.workstream} raw={snapshot.raw} {...dialogProps}
+          onApply={(before, next) => applyIdentification(dialog.workstream, before, next)} onClose={() => setDialog(null)} />
       )}
       {dialog?.kind === 'removeRule' && (
         <RemoveRuleDialog rule={dialog.rule} ruleset={dialog.ruleset} {...dialogProps}

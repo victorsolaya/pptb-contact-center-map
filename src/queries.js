@@ -1,7 +1,7 @@
 // Contact Center config read from the Dataverse Web API (OData paths, relative to /api/data/v9.2/).
 
 export const QUERIES = {
-  workstreams: 'msdyn_liveworkstreams?$select=msdyn_name,msdyn_streamsource,msdyn_mode,msdyn_direction,msdyn_workdistributionmode,msdyn_capacityrequired,msdyn_capacityformat,_msdyn_defaultqueue_value,_msdyn_bot_user_value,_msdyn_routingcontractid_value,statecode',
+  workstreams: 'msdyn_liveworkstreams?$select=msdyn_name,msdyn_streamsource,msdyn_mode,msdyn_direction,msdyn_workdistributionmode,msdyn_capacityrequired,msdyn_capacityformat,_msdyn_defaultqueue_value,_msdyn_bot_user_value,_msdyn_routingcontractid_value,msdyn_recordidentificationrule,statecode',
   routingConfigs: 'msdyn_routingconfigurations?$select=msdyn_name,_msdyn_liveworkstreamid_value,msdyn_isactiveconfiguration',
   routingSteps: 'msdyn_routingconfigurationsteps?$select=msdyn_name,msdyn_steporder,msdyn_type,_msdyn_routingconfigurationid_value,_msdyn_rulesetid_value',
   rulesets: 'msdyn_decisionrulesets?$select=msdyn_name,msdyn_uniquename,msdyn_rulesettype,msdyn_authoringmode,msdyn_rulesetdefinition,msdyn_description,_msdyn_inputcontractid_value,_msdyn_outputcontractid_value',

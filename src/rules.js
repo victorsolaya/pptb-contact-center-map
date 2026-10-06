@@ -1,17 +1,23 @@
 // Parser for Dataverse decision-ruleset XML: <decision><rules><rule><logical|condition/><action/></rule></rules></decision>
 // Machine-generated XML with no CDATA/namespaces, so a regex tokenizer is enough.
 
-const decode = (text) => text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
+// one pass, so a decoded "&" can't start another reference ("&#38;amp;" is "&amp;")
+const ENTITIES = { lt: '<', gt: '>', quot: '"', apos: "'", amp: '&' }
+const decode = (text) =>
+  text.replace(/&(lt|gt|quot|apos|amp|#\d+|#x[0-9a-f]+);/gi, (reference, name) =>
+    name[0] !== '#' ? ENTITIES[name.toLowerCase()] ?? reference
+    : String.fromCodePoint(name[1].toLowerCase() === 'x' ? parseInt(name.slice(2), 16) : Number(name.slice(1))))
 
 export function parseXml(xml) {
   const root = { tag: '#root', attrs: {}, children: [], text: '' }
   const stack = [root]
-  for (const match of xml.matchAll(/<(\/?)([\w:.-]+)((?:\s+[\w:.-]+="[^"]*")*)\s*(\/?)>|([^<]+)/g)) {
+  // comments are not content: a commented-out element must not be read as a real one
+  for (const match of xml.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<(\/?)([\w:.-]+)((?:\s+[\w:.-]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>|([^<]+)/g)) {
     const top = stack.at(-1)
     if (match[5] !== undefined) top.text += decode(match[5])
     else if (match[1]) stack.length > 1 && stack.pop()
     else {
-      const node = { tag: match[2], attrs: Object.fromEntries([...match[3].matchAll(/([\w:.-]+)="([^"]*)"/g)].map((attrMatch) => [attrMatch[1], decode(attrMatch[2])])), children: [], text: '' }
+      const node = { tag: match[2], attrs: Object.fromEntries([...match[3].matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map((attrMatch) => [attrMatch[1], decode(attrMatch[2] ?? attrMatch[3])])), children: [], text: '' }
       top.children.push(node)
       if (!match[4]) stack.push(node)
     }
