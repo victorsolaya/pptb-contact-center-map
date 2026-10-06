@@ -96,8 +96,11 @@ body.resizing { cursor: col-resize; user-select: none; }
 .detail h2 { font-size: 15px; margin: 6px 0; word-break: break-word; }
 .detail .close { position: absolute; top: 8px; right: 8px; }
 .detail .collapse-panel { position: absolute; top: 8px; right: 40px; }
+.detail-empty { margin: 40px 16px 0 4px; font-size: 13px; line-height: 1.5; }
 .detail:has(.collapse-panel) h2 { padding-right: 64px; }
-.detail.collapsed { width: 36px; padding: 8px 0; display: flex; flex-direction: column; align-items: center; gap: 10px; overflow: hidden; }
+.detail.collapsed { width: 44px; padding: 10px 0; display: flex; flex-direction: column; align-items: center; gap: 12px; overflow: hidden; box-shadow: -2px 0 8px #0000000d; }
+.detail .expand-panel { width: 30px; height: 30px; padding: 0; border-radius: 8px; font-size: 16px; font-weight: 700; border: 1px solid var(--border-2); background: var(--panel); }
+.detail .expand-panel:hover { border-color: #2563eb; color: #2563eb; }
 .detail.collapsed .kind { width: 10px; height: 10px; padding: 0; border-radius: 50%; }
 .detail .vertical-label { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; font-weight: 600; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 70vh; cursor: pointer; }
 .detail dl div { margin: 8px 0; }

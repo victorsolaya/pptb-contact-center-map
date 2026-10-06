@@ -25,9 +25,9 @@ async function loadSnapshot() {
   return response.ok && response.headers.get('content-type')?.includes('json') ? response.json() : null
 }
 
-// Detail panel: width dragged by its left edge, and minimized or not; remembered in this browser (best effort).
+// Detail panel width: dragged by its left edge, remembered in this browser (best effort). The panel always
+// opens expanded; minimizing only lasts until another item is picked.
 const WIDTH_KEY = 'ccmap.detailWidth'
-const COLLAPSED_KEY = 'ccmap.detailCollapsed'
 const readSetting = (key) => { try { return localStorage.getItem(key) } catch { return null } }
 const writeSetting = (key, value) => { try { localStorage.setItem(key, value) } catch {} }
 const clampWidth = (width) => Math.round(Math.min(Math.max(width, 280), window.innerWidth * 0.7))
@@ -68,8 +68,7 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false)
   const [editingId, setEditingId] = useState(null) // node whose details are being edited in the detail panel
   const [detailWidth, setDetailWidth] = useState(initialDetailWidth)
-  const [detailCollapsed, setDetailCollapsed] = useState(() => readSetting(COLLAPSED_KEY) === 'true')
-  const collapseDetail = (collapsed) => { setDetailCollapsed(collapsed); writeSetting(COLLAPSED_KEY, String(collapsed)) }
+  const [detailCollapsed, setDetailCollapsed] = useState(false)
   const focus = (id) => { setFocusId(id); setSelectedId(id) }
   const {
     dialog, setDialog, openDialog, busy, editError, setEditError, toast, setToast, undo,
@@ -100,6 +99,7 @@ export default function App() {
   }, [])
 
   useEffect(() => { document.documentElement.lang = lang }, [lang])
+  useEffect(() => setDetailCollapsed(false), [selectedId]) // a newly picked item is always shown
   // after a refresh the focused item may be gone (deleted in the admin center)
   useEffect(() => { if (graph && focusId && !graph.nodes.some((node) => node.id === focusId)) setFocusId(null) }, [graph])
 
@@ -122,6 +122,7 @@ export default function App() {
   if (!graph) return <div className="empty">{inPptb() ? t.text.noConnection : t.text.noData}</div>
   const selected = graph.nodes.find((node) => node.id === selectedId)
   const canEditSelected = edit && selected && recordOf(snapshot.raw, selected)
+  const panelName = selected?.label ?? t.text.detailsPanel
   // re-read everything from the same connection, keeping what is selected and where the map is
   const refresh = () => {
     setEditingId(null) // the form's values would be older than the refreshed map
@@ -212,41 +213,43 @@ export default function App() {
           {toast && <Toast toast={toast} busy={busy} onUndo={undo} onClose={() => setToast(null)} t={t} />}
         </ReactFlowProvider>
       </main>
-      {selected && (
-        detailCollapsed ? (
-          <aside className="detail collapsed">
-            <button className="expand-panel" title={t.text.expand(selected.label)} aria-label={t.text.expand(selected.label)} onClick={() => collapseDetail(false)}>‹</button>
-            <span className="kind" style={{ background: TYPES[selected.type]?.color }} aria-hidden />
-            <span className="vertical-label" onClick={() => collapseDetail(false)}>{selected.label}</span>
-          </aside>
-        ) : (
+      {detailCollapsed ? (
+        <aside className="detail collapsed">
+          <button className="expand-panel" title={t.text.expand(panelName)} aria-label={t.text.expand(panelName)} onClick={() => setDetailCollapsed(false)}>‹</button>
+          {selected && <span className="kind" style={{ background: TYPES[selected.type]?.color }} aria-hidden />}
+          <span className="vertical-label" onClick={() => setDetailCollapsed(false)}>{panelName}</span>
+        </aside>
+      ) : (
         <aside className="detail" style={{ width: detailWidth }}>
           <div className="detail-resizer" role="separator" aria-orientation="vertical" aria-label={t.text.resizePanel} title={t.text.resizePanel} tabIndex={0}
             onPointerDown={(e) => startResize(e, detailWidth, setDetailWidth)}
             onKeyDown={(e) => { const step = { ArrowLeft: 24, ArrowRight: -24 }[e.key]; if (step) { e.preventDefault(); setDetailWidth((width) => saveDetailWidth(clampWidth(width + step))) } }} />
-          <button className="collapse-panel" title={t.text.minimize(selected.label)} aria-label={t.text.minimize(selected.label)} onClick={() => collapseDetail(true)}>›</button>
-          <button className="close" onClick={() => setSelectedId(null)}>×</button>
-          <div className="kind" style={{ background: TYPES[selected.type]?.color }}>{t.types[selected.type]}</div>
-          <h2>{selected.label}</h2>
-          <div className="detail-actions">
-            {selected.id !== focusId && <button onClick={() => focus(selected.id)}>{t.text.centerHere}</button>}
-            {canEditSelected && editingId !== selected.id && <button className="primary" onClick={() => setEditingId(selected.id)}>✎ {t.edit.editDetails}</button>}
-            {canEditSelected && selected.type === 'workstream' && editingId !== selected.id && canEditSelected.msdyn_recordidentificationrule?.trim() && (
-              <button onClick={() => openDialog({ kind: 'identification', workstream: selected })}>✎ {t.edit.identButton}</button>
-            )}
-          </div>
-          {canEditSelected && editingId === selected.id ? (
-            <DetailsForm key={selected.id} node={selected} raw={snapshot.raw} queues={queueOptions} t={t} onCancel={() => setEditingId(null)}
-              onReview={(plan) => openDialog({ kind: 'details', node: selected, plan })} />
-          ) : (
-            <dl>
-              {Object.entries(selected.data ?? {}).filter(([, value]) => value != null && value !== '').map(([label, value]) => (
-                <div key={label}><dt>{label}</dt><dd>{typeof value === 'object' ? JSON.stringify(value, null, 1) : String(value)}</dd></div>
-              ))}
-            </dl>
+          <button className="collapse-panel" title={t.text.minimize(panelName)} aria-label={t.text.minimize(panelName)} onClick={() => setDetailCollapsed(true)}>›</button>
+          {!selected ? <p className="muted detail-empty">{t.text.noSelection}</p> : (
+            <>
+              <button className="close" title={t.text.clearSelection} aria-label={t.text.clearSelection} onClick={() => setSelectedId(null)}>×</button>
+              <div className="kind" style={{ background: TYPES[selected.type]?.color }}>{t.types[selected.type]}</div>
+              <h2>{selected.label}</h2>
+              <div className="detail-actions">
+                {selected.id !== focusId && <button onClick={() => focus(selected.id)}>{t.text.centerHere}</button>}
+                {canEditSelected && editingId !== selected.id && <button className="primary" onClick={() => setEditingId(selected.id)}>✎ {t.edit.editDetails}</button>}
+                {canEditSelected && selected.type === 'workstream' && editingId !== selected.id && canEditSelected.msdyn_recordidentificationrule?.trim() && (
+                  <button onClick={() => openDialog({ kind: 'identification', workstream: selected })}>✎ {t.edit.identButton}</button>
+                )}
+              </div>
+              {canEditSelected && editingId === selected.id ? (
+                <DetailsForm key={selected.id} node={selected} raw={snapshot.raw} queues={queueOptions} t={t} onCancel={() => setEditingId(null)}
+                  onReview={(plan) => openDialog({ kind: 'details', node: selected, plan })} />
+              ) : (
+                <dl>
+                  {Object.entries(selected.data ?? {}).filter(([, value]) => value != null && value !== '').map(([label, value]) => (
+                    <div key={label}><dt>{label}</dt><dd>{typeof value === 'object' ? JSON.stringify(value, null, 1) : String(value)}</dd></div>
+                  ))}
+                </dl>
+              )}
+            </>
           )}
         </aside>
-        )
       )}
       {(dialog?.kind === 'add' || dialog?.kind === 'confirm') && (
         <MemberDialog dialog={dialog} setDialog={openDialog} apply={applyMember} {...dialogProps} />

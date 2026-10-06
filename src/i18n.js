@@ -15,6 +15,7 @@ const en = {
     uniqueName: 'Unique name', authoring: 'Authoring mode', description: 'Description', condition: 'Condition', actions: 'Actions', orderBy: 'Order by',
   },
   text: {
+    detailsPanel: 'Details', noSelection: 'Select a card on the map or an item in the list to see its details here.', clearSelection: 'Clear the selection',
     resizePanel: 'Drag to resize the panel',
     identNoRules: 'No rules',
     identLiteral: (v) => `"${v}" (fixed value)`,
@@ -109,6 +110,7 @@ const es = {
     uniqueName: 'Nombre único', authoring: 'Modo de creación', description: 'Descripción', condition: 'Condición', actions: 'Acciones', orderBy: 'Ordenar por',
   },
   text: {
+    detailsPanel: 'Detalles', noSelection: 'Selecciona una tarjeta del mapa o un elemento de la lista para ver aquí sus detalles.', clearSelection: 'Quitar la selección',
     resizePanel: 'Arrastra para cambiar el ancho del panel',
     identNoRules: 'Sin reglas',
     identLiteral: (v) => `«${v}» (valor fijo)`,
@@ -203,6 +205,7 @@ const pt = {
     uniqueName: 'Nome exclusivo', authoring: 'Modo de criação', description: 'Descrição', condition: 'Condição', actions: 'Ações', orderBy: 'Ordenar por',
   },
   text: {
+    detailsPanel: 'Detalhes', noSelection: 'Selecione um cartão do mapa ou um item da lista para ver aqui os detalhes.', clearSelection: 'Limpar a seleção',
     resizePanel: 'Arraste para redimensionar o painel',
     identNoRules: 'Sem regras',
     identLiteral: (v) => `"${v}" (valor fixo)`,
@@ -297,6 +300,7 @@ const fr = {
     uniqueName: 'Nom unique', authoring: 'Mode de création', description: 'Description', condition: 'Condition', actions: 'Actions', orderBy: 'Trier par',
   },
   text: {
+    detailsPanel: 'Détails', noSelection: 'Sélectionnez une carte sur le schéma ou un élément de la liste pour voir ses détails ici.', clearSelection: 'Effacer la sélection',
     resizePanel: 'Faites glisser pour redimensionner le panneau',
     identNoRules: 'Aucune règle',
     identLiteral: (v) => `« ${v} » (valeur fixe)`,
@@ -391,6 +395,7 @@ const de = {
     uniqueName: 'Eindeutiger Name', authoring: 'Erstellungsmodus', description: 'Beschreibung', condition: 'Bedingung', actions: 'Aktionen', orderBy: 'Sortieren nach',
   },
   text: {
+    detailsPanel: 'Details', noSelection: 'Wähle eine Karte im Diagramm oder ein Element in der Liste, um hier die Details zu sehen.', clearSelection: 'Auswahl aufheben',
     resizePanel: 'Ziehen, um die Breite des Bereichs zu ändern',
     identNoRules: 'Keine Regeln',
     identLiteral: (v) => `„${v}“ (fester Wert)`,
@@ -485,6 +490,7 @@ const it = {
     uniqueName: 'Nome univoco', authoring: 'Modalità di creazione', description: 'Descrizione', condition: 'Condizione', actions: 'Azioni', orderBy: 'Ordina per',
   },
   text: {
+    detailsPanel: 'Dettagli', noSelection: 'Seleziona una scheda della mappa o un elemento dell’elenco per vederne qui i dettagli.', clearSelection: 'Annulla la selezione',
     resizePanel: 'Trascina per ridimensionare il pannello',
     identNoRules: 'Nessuna regola',
     identLiteral: (v) => `"${v}" (valore fisso)`,
