@@ -17,7 +17,7 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 - Overflow actions resolved to their target queue or phone number. "Transfer to queue" overflows are also drawn as an arrow.
 - Every section inside a queue card (operating hours, PreQueue, InQueue, agents) can be minimized with its **−/+** button, or all at once from the toolbar.
 - One click on a card highlights its incoming path and everything below it; click the background to clear.
-- The detail panel on the right can be resized by dragging its left edge (or with the arrow keys on it) and minimized with **›**; both are remembered.
+- The detail panel on the right is always visible. It can be resized by dragging its left edge (or with the arrow keys on it), and its width is remembered; **›** minimizes it until you pick another item.
 - **Export PNG** for documents and **Copy Mermaid** for wikis or Markdown.
 - Optional **Edit mode** (off by default): add or remove agents, create queues, create workstreams from an existing one, edit the details of workstreams, queues and capacity profiles (including unit-based or profile-based capacity and new capacity profiles), edit how a workstream identifies the customer, and add or delete rules in route-to-queue and classification rulesets, with preview, confirmation and undo. See [What this tool changes](#what-this-tool-changes).
 - Follows the ToolBox light and dark theme.
