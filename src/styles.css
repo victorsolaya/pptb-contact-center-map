@@ -61,7 +61,7 @@ button:hover { background: var(--hover); }
 .list li small { white-space: pre-line; display: block; color: var(--muted); margin-left: 14px; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; flex: none; }
 
-.main { flex: 1; position: relative; overflow: hidden; }
+.main { flex: 1; min-width: 0; position: relative; overflow: hidden; }
 .toolbar { position: absolute; z-index: 5; top: 8px; right: 8px; display: flex; gap: 6px; align-items: center; background: var(--toolbar); padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border); }
 .empty { display: grid; place-items: center; height: 100%; color: var(--muted); padding: 24px; text-align: center; }
 
@@ -89,7 +89,7 @@ button:hover { background: var(--hover); }
 .sec .act { color: var(--text); font-weight: 600; }
 .kind { display: inline-block; color: #fff; font-size: 10px; padding: 0 6px; border-radius: 4px; }
 
-.detail { width: 340px; flex: none; box-sizing: border-box; padding: 12px; border-left: 1px solid var(--border); background: var(--panel); overflow: auto; position: relative; }
+.detail { width: 340px; max-width: 70vw; flex: none; box-sizing: border-box; padding: 12px; border-left: 1px solid var(--border); background: var(--panel); overflow: auto; position: relative; }
 .detail-resizer { position: absolute; top: 0; bottom: 0; left: 0; width: 6px; cursor: col-resize; z-index: 6; }
 .detail-resizer:hover, .detail-resizer:focus-visible, body.resizing .detail-resizer { background: #2563eb55; outline: none; }
 body.resizing { cursor: col-resize; user-select: none; }

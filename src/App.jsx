@@ -30,8 +30,10 @@ async function loadSnapshot() {
 const WIDTH_KEY = 'ccmap.detailWidth'
 const readSetting = (key) => { try { return localStorage.getItem(key) } catch { return null } }
 const writeSetting = (key, value) => { try { localStorage.setItem(key, value) } catch {} }
-const clampWidth = (width) => Math.round(Math.min(Math.max(width, 280), window.innerWidth * 0.7))
-const initialDetailWidth = () => clampWidth(Number(readSetting(WIDTH_KEY)) || 340)
+// The upper bound (70% of the window) is CSS max-width: inside ToolBox the tool may start in a hidden
+// frame whose window is 0 px wide, so the window size can't be used to compute the starting width.
+const clampWidth = (width) => Math.round(Math.min(Math.max(width, 280), Math.max(window.innerWidth * 0.7, 280)))
+const initialDetailWidth = () => Math.max(Number(readSetting(WIDTH_KEY)) || 340, 280)
 function saveDetailWidth(width) {
   writeSetting(WIDTH_KEY, String(width))
   return width
