@@ -116,7 +116,10 @@ Credentials never reach the tool: all requests go through the ToolBox `dataverse
 npm install
 npm run build   # dist/ for ToolBox
 npm test        # parser, graph, i18n, ToolBox adapter and edit checks
+npm run deploy  # from main: tests, build, ToolBox validator, publish to npm, tag and push
 ```
+
+`npm run deploy` publishes the version in package.json if it is not on npm yet; otherwise it raises the patch version first (`npm run deploy -- minor` or `-- major` for the others) and commits the bump. It asks for `npm login` when there is no npm session.
 
 To try it locally in the desktop app: **Settings → Show Debug Menu**, then **Debug → Load Local Tool** and select this folder.
 
