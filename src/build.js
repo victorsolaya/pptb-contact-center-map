@@ -87,6 +87,10 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
     ...rows(raw, 'rulesets').map((ruleset) => [normGuid(ruleset.msdyn_decisionrulesetid), ruleset.msdyn_name]),
   ])
   const named = (text) => text?.replace(/\{?([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\}?/gi, (guid, bare) => nameById.get(bare.toLowerCase()) ?? guid)
+  // agent.basePresenceStatus compares base presence values (192360000...): show their labels, in the user's language
+  const presenceLabel = new Map(rows(raw, 'presences').map((presence) => [String(presence.msdyn_basepresencestatus), formatted(presence, 'msdyn_basepresencestatus')]))
+  const presences = (text) => text.replace(/(basePresenceStatus \S+ )(\[[^\]]*\]|"\d+")/g, (_, head, values) =>
+    head + values.replace(/"(\d+)"/g, (code, value) => (presenceLabel.has(value) ? JSON.stringify(presenceLabel.get(value)) : code)))
   const contractName = new Map(rows(raw, 'contracts').map((contract) => [normGuid(contract.msdyn_decisioncontractid), contract.msdyn_uniquename]))
   const ruleTargets = []
   for (const ruleset of rows(raw, 'rulesets')) {
@@ -110,7 +114,7 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
         attr === 'assign_to.queue' ? `${t.text.queueArrow} ${named(value)}${percentage ? ` (${percentage}%)` : ''}`
         : attr?.startsWith('overflowaction.') || attr === RULE_OVERFLOW ? `${t.text.overflowArrow} ${named(value)}`
         : `${attr} = ${named(value)}`)
-      const ruleNodeId = node('rule', `${ruleset.msdyn_decisionrulesetid}-${rule.id}`, rule.name, named(simplify(rule.when, t)) || rule.orderBy.join(', ') || t.text.always, {
+      const ruleNodeId = node('rule', `${ruleset.msdyn_decisionrulesetid}-${rule.id}`, rule.name, presences(named(simplify(rule.when, t))) ||rule.orderBy.join(', ') || t.text.always, {
         [fields.condition]: rule.when || `(${t.text.always})`,
         [fields.actions]: actions.join('\n'),
         [fields.orderBy]: rule.orderBy.join(', '),

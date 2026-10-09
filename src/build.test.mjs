@@ -56,4 +56,15 @@ assert.equal(own.sub, 'msdyn_ocliveworkitem.msdyn_liveworkstreamid == "Contoso -
 assert.deepEqual(own.sets, [])
 assert.match(own.data.Actions, /Overflow → r1_pre_queue_rtq_overflow_override/)
 assert.ok(specific.edges.some((edge) => edge.source === own.id && edge.target === `ruleset:${OVERRIDE}` && edge.label === 'pre-queue overflow'))
+// assignment rules compare base presence values: shown with the org's labels; unknown values stay as they are
+const FV = '@OData.Community.Display.V1.FormattedValue'
+const presence = buildGraph({ raw: {
+  presences: [{ msdyn_basepresencestatus: 192360000, [`msdyn_basepresencestatus${FV}`]: 'Disponible' }, { msdyn_basepresencestatus: 192360001, [`msdyn_basepresencestatus${FV}`]: 'Ocupado' }],
+  rulesets: [{ msdyn_decisionrulesetid: 'rs1', msdyn_name: 'Assignment', msdyn_rulesetdefinition: `<decision><rules><rule id="a1" name="Available agents"><logical operator="AND">
+    <condition operator="in"><lhs type="attribute">agent.basePresenceStatus</lhs><rhs type="multistaticvalues"><value>192360001</value><value>192360000</value><value>192369999</value></rhs></condition>
+    <condition operator="=="><lhs type="attribute">agent.systemuser.identityid</lhs><rhs type="staticvalue">192360000</rhs></condition>
+  </logical><action><orderby type="attribute" descending="false">agent.lastSessionReleasedOn</orderby></action></rule></rules></decision>` }],
+} }, LANGS.es)
+assert.equal(presence.nodes.find((node) => node.label === 'Available agents').sub,
+  'agent.basePresenceStatus in ["Ocupado", "Disponible", "192369999"] AND agent.systemuser.identityid == "192360000"')
 console.log('build ok')
