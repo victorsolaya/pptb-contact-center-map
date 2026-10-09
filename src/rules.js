@@ -25,14 +25,14 @@ export function parseXml(xml) {
   return root
 }
 
-// overflow wait times carry their unit: <rhs type="staticvalue" unit="seconds">30</rhs> reads "30 s",
-// and whole minutes, hours or days read as such (3600 seconds is "1 h")
-const UNITS = { seconds: 's', minutes: 'min', hours: 'h', days: 'd' }
-const SECONDS = [['d', 86400], ['h', 3600], ['min', 60]]
+// overflow wait times carry their unit: <rhs type="staticvalue" unit="seconds">30</rhs> reads "30s",
+// and whole minutes, hours or days read as such (7200 seconds is "2h", 120 is "2m", 172800 is "2d")
+const UNITS = { seconds: 's', minutes: 'm', hours: 'h', days: 'd' }
+const SECONDS = [['d', 86400], ['h', 3600], ['m', 60]]
 function duration(value, unit) {
-  if (unit !== 'seconds' || !/^\d+$/.test(value)) return `${value} ${UNITS[unit] ?? unit}`
+  if (unit !== 'seconds' || !/^\d+$/.test(value)) return UNITS[unit] ? `${value}${UNITS[unit]}` : `${value} ${unit}`
   const [symbol, size] = SECONDS.find(([, size]) => value >= size && value % size === 0) ?? ['s', 1]
-  return `${value / size} ${symbol}`
+  return `${value / size}${symbol}`
 }
 const operandText = (operand) =>
   operand.attrs.type === 'multistaticvalues' ? `[${operand.children.map((value) => JSON.stringify(value.text.trim())).join(', ')}]` // "in" a list of values
