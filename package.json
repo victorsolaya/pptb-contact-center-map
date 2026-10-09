@@ -44,7 +44,13 @@
   "scripts": {
     "test": "node src/i18n.test.mjs && node src/rules.test.mjs && node src/graph.test.mjs && node src/build.test.mjs && node src/pptb.test.mjs && node src/edit.test.mjs && node src/workstream.test.mjs && node src/details.test.mjs && node src/identification.test.mjs",
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "validate": "pptb-validate",
+    "prepublishOnly": "npm test && npm run build && pptb-validate",
+    "deploy": "node scripts/deploy.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@xyflow/react": "^12.12.0",
@@ -54,6 +60,7 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@pptb/validate": "^1.0.5",
     "@vitejs/plugin-react": "^6.1.1",
     "vite": "^8.3.2"
   }
