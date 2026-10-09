@@ -37,4 +37,23 @@ assert.ok(!graph.edges.some((edge) => edge.target === 'ruleset:rsold'), 'inactiv
 assert.equal(graph.edges.filter((edge) => edge.source.startsWith('queue:')).length, 1, 'non-omnichannel memberships dropped')
 assert.match(graph.nodes.find((node) => node.type === 'rule').data.Acciones, /Cola → Advisor queue/)
 assert.deepEqual(graph.meta.warnings, ['facebook: 400 boom'])
+// a rule with its own PreQueue overflow links to that ruleset; GUIDs in conditions and actions read as names
+const OVERRIDE = '00000000-0000-4000-8000-0000000000c1'
+const specific = buildGraph({ raw: {
+  queues: [{ queueid: Q.toLowerCase(), name: 'Advisor queue' }],
+  workstreams: [{ msdyn_liveworkstreamid: '00000000-0000-4000-8000-0000000000c2', msdyn_name: 'Contoso - Voice' }],
+  rulesets: [
+    { msdyn_decisionrulesetid: 'rs1', msdyn_name: 'Routing', msdyn_rulesetdefinition: `<decision><rules><rule id="r1" name="Own overflow">
+      <condition operator="=="><lhs type="attribute">msdyn_ocliveworkitem.msdyn_liveworkstreamid</lhs><rhs type="staticvalue">{00000000-0000-4000-8000-0000000000C2}</rhs></condition>
+      <action><setattribute><lhs type="attribute">assign_to.queue</lhs><rhs type="staticvalue">${Q}</rhs></setattribute>
+      <setattribute><lhs type="attribute">prequeue_overflow_ruleset.msdyn_decisionruleset.msdyn_decisionrulesetid</lhs><rhs type="staticvalue">{${OVERRIDE}}</rhs></setattribute></action>
+    </rule></rules></decision>` },
+    { msdyn_decisionrulesetid: OVERRIDE, msdyn_name: 'r1_pre_queue_rtq_overflow_override' },
+  ],
+} }, LANGS.en)
+const own = specific.nodes.find((node) => node.label === 'Own overflow')
+assert.equal(own.sub, 'msdyn_ocliveworkitem.msdyn_liveworkstreamid == "Contoso - Voice"')
+assert.deepEqual(own.sets, [])
+assert.match(own.data.Actions, /Overflow → r1_pre_queue_rtq_overflow_override/)
+assert.ok(specific.edges.some((edge) => edge.source === own.id && edge.target === `ruleset:${OVERRIDE}` && edge.label === 'pre-queue overflow'))
 console.log('build ok')

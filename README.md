@@ -13,7 +13,7 @@ Pick a workstream, queue, rule or user and the tool draws everything that flows 
 ## Features
 
 - Channels (voice with phone number, WhatsApp, chat, Teams, Facebook, SMS, custom messaging), bots and capacity profiles linked to each workstream.
-- Routing rules shown as readable conditions (for example `If outside operating hours → Transfer to phone: +1 555 0100`), with the target queue resolved by name. Rules that split work by percentage draw an arrow to each queue with its share (`80%`), and wait times keep their unit (`If queue_inqueue.lapsedwaittime >= 30 s`).
+- Routing rules shown as readable conditions (for example `If outside operating hours → Transfer to phone: +1 555 0100`), with the target queue resolved by name. Rules that split work by percentage draw an arrow to each queue with its share (`80%`), a rule with its own overflow (*Handle rule-specific overflows*) links to that overflow ruleset, records referenced by GUID (a workstream, a queue) show their name, and wait times keep their unit (`If queue_inqueue.lapsedwaittime >= 30 s`).
 - Overflow actions resolved to their target queue or phone number. "Transfer to queue" overflows are also drawn as an arrow.
 - Every section inside a queue card (operating hours, PreQueue, InQueue, agents) can be minimized with its **−/+** button, or all at once from the toolbar.
 - One click on a card highlights its incoming path and everything below it; click the background to clear.

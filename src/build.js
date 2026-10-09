@@ -17,6 +17,9 @@ const CHANNELS = [
   ['custom', 'msdyn_occustommessagingchannel', 'msdyn_name'],
 ]
 
+// "Handle rule-specific overflows" on a route-to-queue rule: the rule names its own PreQueue overflow ruleset
+const RULE_OVERFLOW = 'prequeue_overflow_ruleset.msdyn_decisionruleset.msdyn_decisionrulesetid'
+
 // Labels come from the dictionary `t`; edges also carry a language-independent `kind` for logic.
 export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
   const fields = t.fields
@@ -77,8 +80,13 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
         [fields.workstream]: formatted(channel, '_msdyn_liveworkstreamid_value'),
       })
 
-  // Rulesets and their rules. Rule actions point at queues / overflow actions by GUID inside the XML.
-  const nameOf = (type, guid) => nodes.get(key(type, guid))?.label
+  // Rulesets and their rules. Rule XML points at records by GUID (queues, overflow actions, a rule's own overflow
+  // ruleset, workstreams in lookups and record routing): show the record's name when it was loaded.
+  const nameById = new Map([
+    ...[...nodes.values()].map((loaded) => [loaded.id.slice(loaded.id.indexOf(':') + 1), loaded.label]),
+    ...rows(raw, 'rulesets').map((ruleset) => [normGuid(ruleset.msdyn_decisionrulesetid), ruleset.msdyn_name]),
+  ])
+  const named = (text) => text?.replace(/\{?([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\}?/gi, (guid, bare) => nameById.get(bare.toLowerCase()) ?? guid)
   const contractName = new Map(rows(raw, 'contracts').map((contract) => [normGuid(contract.msdyn_decisioncontractid), contract.msdyn_uniquename]))
   const ruleTargets = []
   for (const ruleset of rows(raw, 'rulesets')) {
@@ -99,20 +107,21 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
     })
     parseRules(ruleset.msdyn_rulesetdefinition).forEach((rule, i) => {
       const actions = rule.set.map(({ attr, value, percentage }) =>
-        attr === 'assign_to.queue' ? `${t.text.queueArrow} ${nameOf('queue', value) ?? value}${percentage ? ` (${percentage}%)` : ''}`
-        : attr?.startsWith('overflowaction.') ? `${t.text.overflowArrow} ${nameOf('overflow', value) ?? value}`
-        : `${attr} = ${value}`)
-      const ruleNodeId = node('rule', `${ruleset.msdyn_decisionrulesetid}-${rule.id}`, rule.name, simplify(rule.when, t) || rule.orderBy.join(', ') || t.text.always, {
+        attr === 'assign_to.queue' ? `${t.text.queueArrow} ${named(value)}${percentage ? ` (${percentage}%)` : ''}`
+        : attr?.startsWith('overflowaction.') || attr === RULE_OVERFLOW ? `${t.text.overflowArrow} ${named(value)}`
+        : `${attr} = ${named(value)}`)
+      const ruleNodeId = node('rule', `${ruleset.msdyn_decisionrulesetid}-${rule.id}`, rule.name, named(simplify(rule.when, t)) || rule.orderBy.join(', ') || t.text.always, {
         [fields.condition]: rule.when || `(${t.text.always})`,
         [fields.actions]: actions.join('\n'),
         [fields.orderBy]: rule.orderBy.join(', '),
       })
-      const sets = rule.set.filter(({ attr }) => attr && attr !== 'assign_to.queue' && !attr.startsWith('overflow'))
-      Object.assign(nodes.get(ruleNodeId), { rulesetId: rulesetNodeId, ruleId: rule.id, sets: sets.map(({ attr, value }) => `${attr.replace(/^liveworkitemcontext\./, '')} = "${value}"`) })
+      const sets = rule.set.filter(({ attr }) => attr && attr !== 'assign_to.queue' && attr !== RULE_OVERFLOW && !attr.startsWith('overflow'))
+      Object.assign(nodes.get(ruleNodeId), { rulesetId: rulesetNodeId, ruleId: rule.id, sets: sets.map(({ attr, value }) => `${attr.replace(/^liveworkitemcontext\./, '')} = "${named(value)}"`) })
       edge(rulesetNodeId, ruleNodeId, 'order', `#${i + 1}`)
       for (const { attr, value, percentage } of rule.set) {
         if (attr === 'assign_to.queue') ruleTargets.push([ruleNodeId, 'queue', value, percentage && `${percentage}%`])
         else if (attr?.startsWith('overflowaction.')) ruleTargets.push([ruleNodeId, 'overflow', value])
+        else if (attr === RULE_OVERFLOW) ruleTargets.push([ruleNodeId, 'ruleset', value, t.edges.pre])
       }
     })
   }

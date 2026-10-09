@@ -39,6 +39,13 @@ const [inQueue] = parseRules(`<decision hit-policy="all" version="1"><rules><rul
   <condition operator=">="><lhs type="attribute">queue_inqueue.lapsedwaittime</lhs><rhs type="staticvalue" unit="seconds">30</rhs></condition>
 </rule></rules></decision>`)
 assert.equal(simplify(inQueue.when, LANGS.en), 'queue_inqueue.lapsedwaittime >= 30 s')
+const waitOf = (seconds) => parseRules(`<rule id="w"><condition operator=">="><lhs type="attribute">x</lhs><rhs type="staticvalue" unit="seconds">${seconds}</rhs></condition></rule>`)[0].when
+assert.deepEqual([3600, 120, 90, 172800].map(waitOf), ['x >= 1 h', 'x >= 2 min', 'x >= 90 s', 'x >= 2 d'])
+assert.equal(parseRules(`<rule id="o"><logical operator="AND"><logical operator="OR"><condition operator="=="><lhs type="attribute">a</lhs><rhs type="staticvalue">1</rhs></condition><condition operator="=="><lhs type="attribute">b</lhs><rhs type="staticvalue">2</rhs></condition></logical></logical></rule>`)[0].when,
+  'a == "1" OR b == "2"')
+// "in" a list: <rhs type="multistaticvalues"><value>..</value></rhs>
+assert.equal(parseRules(`<rule id="m"><condition operator="in"><lhs type="attribute">agent.basePresenceStatus</lhs><rhs type="multistaticvalues"><value>192360001</value><value>192360000</value></rhs></condition></rule>`)[0].when,
+  'agent.basePresenceStatus in ["192360001", "192360000"]')
 
 // percentage-based routing: the queues live in <upsertrecords> records, not in assign_to.queue
 const [split] = parseRules(`<decision><rules><rule id="p1" name="Split">

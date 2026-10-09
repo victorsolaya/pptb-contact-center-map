@@ -25,10 +25,18 @@ export function parseXml(xml) {
   return root
 }
 
-// overflow wait times carry their unit: <rhs type="staticvalue" unit="seconds">30</rhs> reads "30 s"
+// overflow wait times carry their unit: <rhs type="staticvalue" unit="seconds">30</rhs> reads "30 s",
+// and whole minutes, hours or days read as such (3600 seconds is "1 h")
 const UNITS = { seconds: 's', minutes: 'min', hours: 'h', days: 'd' }
+const SECONDS = [['d', 86400], ['h', 3600], ['min', 60]]
+function duration(value, unit) {
+  if (unit !== 'seconds' || !/^\d+$/.test(value)) return `${value} ${UNITS[unit] ?? unit}`
+  const [symbol, size] = SECONDS.find(([, size]) => value >= size && value % size === 0) ?? ['s', 1]
+  return `${value / size} ${symbol}`
+}
 const operandText = (operand) =>
-  operand.attrs.unit ? `${operand.text.trim()} ${UNITS[operand.attrs.unit] ?? operand.attrs.unit}`
+  operand.attrs.type === 'multistaticvalues' ? `[${operand.children.map((value) => JSON.stringify(value.text.trim())).join(', ')}]` // "in" a list of values
+  : operand.attrs.unit ? duration(operand.text.trim(), operand.attrs.unit)
   : operand.attrs.type === 'staticvalue' ? JSON.stringify(operand.text.trim()) : operand.text.trim()
 
 function expressionOf(node, parentOperator) {
@@ -38,7 +46,8 @@ function expressionOf(node, parentOperator) {
   }
   if (node.tag !== 'logical') return ''
   const operator = node.attrs.operator
-  const parts = node.children.map((child) => expressionOf(child, operator)).filter(Boolean)
+  // a group alone in its parent needs no parentheses: AND(OR(a, b)) reads "a OR b"
+  const parts = node.children.map((child) => expressionOf(child, node.children.length > 1 ? operator : undefined)).filter(Boolean)
   const joined = parts.join(` ${operator} `)
   return parts.length > 1 && parentOperator && parentOperator !== operator ? `(${joined})` : joined
 }
