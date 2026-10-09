@@ -25,7 +25,19 @@ export function parseXml(xml) {
   return root
 }
 
-const operandText = (operand) => (operand.attrs.type === 'staticvalue' ? JSON.stringify(operand.text.trim()) : operand.text.trim())
+// overflow wait times carry their unit: <rhs type="staticvalue" unit="seconds">30</rhs> reads "30s",
+// and whole minutes, hours or days read as such (7200 seconds is "2h", 120 is "2m", 172800 is "2d")
+const UNITS = { seconds: 's', minutes: 'm', hours: 'h', days: 'd' }
+const SECONDS = [['d', 86400], ['h', 3600], ['m', 60]]
+function duration(value, unit) {
+  if (unit !== 'seconds' || !/^\d+$/.test(value)) return UNITS[unit] ? `${value}${UNITS[unit]}` : `${value} ${unit}`
+  const [symbol, size] = SECONDS.find(([, size]) => value >= size && value % size === 0) ?? ['s', 1]
+  return `${value / size}${symbol}`
+}
+const operandText = (operand) =>
+  operand.attrs.type === 'multistaticvalues' ? `[${operand.children.map((value) => JSON.stringify(value.text.trim())).join(', ')}]` // "in" a list of values
+  : operand.attrs.unit ? duration(operand.text.trim(), operand.attrs.unit)
+  : operand.attrs.type === 'staticvalue' ? JSON.stringify(operand.text.trim()) : operand.text.trim()
 
 function expressionOf(node, parentOperator) {
   if (node.tag === 'condition') {
@@ -34,7 +46,8 @@ function expressionOf(node, parentOperator) {
   }
   if (node.tag !== 'logical') return ''
   const operator = node.attrs.operator
-  const parts = node.children.map((child) => expressionOf(child, operator)).filter(Boolean)
+  // a group alone in its parent needs no parentheses: AND(OR(a, b)) reads "a OR b"
+  const parts = node.children.map((child) => expressionOf(child, node.children.length > 1 ? operator : undefined)).filter(Boolean)
   const joined = parts.join(` ${operator} `)
   return parts.length > 1 && parentOperator && parentOperator !== operator ? `(${joined})` : joined
 }
@@ -54,14 +67,23 @@ export function parseRules(xml) {
   const rules = []
   const walk = (node) => (node.tag === 'rule' ? rules.push(node) : node.children.forEach(walk))
   walk(parseXml(xml ?? ''))
+  const setOf = (setattribute) => ({ attr: setattribute.children[0]?.text.trim(), value: setattribute.children[1]?.text.trim() })
+  const descendants = (node) => node.children.flatMap((child) => [child, ...descendants(child)])
   return rules.map((rule) => {
-    const logic = rule.children.find((child) => child.tag === 'logical' || child.tag === 'condition')
-    const actions = rule.children.find((child) => child.tag === 'action')?.children ?? []
+    // overflow rules put their conditions straight under <rule>, with no <logical> around them: all must hold
+    const logic = rule.children.filter((child) => child.tag === 'logical' || child.tag === 'condition')
+    const action = rule.children.find((child) => child.tag === 'action') ?? { children: [] }
+    const actions = action.children
+    // percentage-based routing: <upsertrecords><records><record> with queuedetails.queueid + queuedetails.percentage
+    const shares = descendants(action).filter((node) => node.tag === 'record').map((record) => {
+      const fields = Object.fromEntries(record.children.filter((child) => child.tag === 'setattribute').map(setOf).map(({ attr, value }) => [attr, value]))
+      return { attr: 'assign_to.queue', value: fields['queuedetails.queueid'], percentage: fields['queuedetails.percentage'] }
+    }).filter((share) => share.value)
     return {
       id: rule.attrs.id,
       name: rule.attrs.name,
-      when: logic ? expressionOf(logic) : '',
-      set: actions.filter((action) => action.tag === 'setattribute').map((action) => ({ attr: action.children[0]?.text.trim(), value: action.children[1]?.text.trim() })),
+      when: expressionOf(logic.length > 1 ? { tag: 'logical', attrs: { operator: 'AND' }, children: logic } : logic[0] ?? { children: [] }),
+      set: [...actions.filter((child) => child.tag === 'setattribute').map(setOf), ...shares],
       orderBy: actions.filter((action) => action.tag === 'orderby').map((action) => action.text.trim() + (action.attrs.descending === 'true' ? ' desc' : '')),
     }
   })

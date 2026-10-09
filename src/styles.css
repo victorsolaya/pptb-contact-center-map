@@ -69,6 +69,8 @@ button:hover { background: var(--hover); }
 .ccnode.focus { box-shadow: 0 0 0 4px var(--focus); }
 .ccnode .lbl { font-weight: 600; line-height: 1.3; word-break: break-word; }
 .ccnode .sub { white-space: pre-line; font-size: 11px; color: var(--muted); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+/* a rule's condition is what the card is for: shown whole, however many variables it checks */
+.ccnode.rule .sub { -webkit-line-clamp: none; }
 .measure { position: absolute; left: 0; top: 0; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
 .measure > div { width: 260px; }
 

@@ -27,7 +27,7 @@ function NodeBody({ data }) {
   // only editable rulesets whose XML has a <rules> element to append to
   const canAddRule = data.edit && data.type === 'ruleset' && data.kind && /<rules[\s/>]/.test(data.xml)
   return (
-    <div className={'ccnode' + (data.focus ? ' focus' : '')} style={{ borderColor: color }}>
+    <div className={`ccnode ${data.type}` + (data.focus ? ' focus' : '')} style={{ borderColor: color }}>
       <div className="top">
         <div className="kind" style={{ background: color }}>{t.types[data.type] ?? data.type}</div>
         {sections.length > 0 && <MinButton t={t} open={anyOpen} title={t.text.allBoxes} onClick={() => data.setAll(sections.map(([section]) => section), !anyOpen)} />}
