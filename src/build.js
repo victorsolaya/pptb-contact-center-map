@@ -98,8 +98,8 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
       outputContract: normGuid(ruleset._msdyn_outputcontractid_value),
     })
     parseRules(ruleset.msdyn_rulesetdefinition).forEach((rule, i) => {
-      const actions = rule.set.map(({ attr, value }) =>
-        attr === 'assign_to.queue' ? `${t.text.queueArrow} ${nameOf('queue', value) ?? value}`
+      const actions = rule.set.map(({ attr, value, percentage }) =>
+        attr === 'assign_to.queue' ? `${t.text.queueArrow} ${nameOf('queue', value) ?? value}${percentage ? ` (${percentage}%)` : ''}`
         : attr?.startsWith('overflowaction.') ? `${t.text.overflowArrow} ${nameOf('overflow', value) ?? value}`
         : `${attr} = ${value}`)
       const ruleNodeId = node('rule', `${ruleset.msdyn_decisionrulesetid}-${rule.id}`, rule.name, simplify(rule.when, t) || rule.orderBy.join(', ') || t.text.always, {
@@ -110,17 +110,17 @@ export function buildGraph({ org, extractedAt, raw }, t = LANGS.en) {
       const sets = rule.set.filter(({ attr }) => attr && attr !== 'assign_to.queue' && !attr.startsWith('overflow'))
       Object.assign(nodes.get(ruleNodeId), { rulesetId: rulesetNodeId, ruleId: rule.id, sets: sets.map(({ attr, value }) => `${attr.replace(/^liveworkitemcontext\./, '')} = "${value}"`) })
       edge(rulesetNodeId, ruleNodeId, 'order', `#${i + 1}`)
-      for (const { attr, value } of rule.set) {
-        if (attr === 'assign_to.queue') ruleTargets.push([ruleNodeId, 'queue', value])
+      for (const { attr, value, percentage } of rule.set) {
+        if (attr === 'assign_to.queue') ruleTargets.push([ruleNodeId, 'queue', value, percentage && `${percentage}%`])
         else if (attr?.startsWith('overflowaction.')) ruleTargets.push([ruleNodeId, 'overflow', value])
       }
     })
   }
 
   // --- edges
-  for (const [ruleNodeId, type, guid] of ruleTargets) {
+  for (const [ruleNodeId, type, guid, label = null] of ruleTargets) {
     if (type === 'queue' && !nodes.has(key('queue', guid))) nodes.get(node('queue', guid, `${t.text.queue} ${normGuid(guid).slice(0, 8)}…`, t.text.queueNotFound)).missing = true
-    edge(ruleNodeId, key(type, guid), 'route', null)
+    edge(ruleNodeId, key(type, guid), 'route', label)
   }
   for (const overflow of rows(raw, 'overflowActions'))
     edge(key('overflow', overflow.msdyn_overflowactionconfigid), key('queue', overflow.msdyn_overflowactiondata), 'transfer')
