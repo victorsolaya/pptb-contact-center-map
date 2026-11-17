@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { readContract, contractVariables, newId } from '../edit.js'
+import { readContract, contractVariables, newId, ruleCode, ruleCodeProblem, rulesetCodeProblem } from '../edit.js'
+import { wellFormedProblem, parserProblem, lineDiff } from '../identification.js'
 import { parseRules, simplify } from '../rules.js'
 import { rows } from '../queries.js'
 import { Modal, Target } from './common.jsx'
@@ -144,6 +145,55 @@ export function RuleDialog({ ruleset, raw, queues, org, env, busy, error, onAppl
         <span className="then">{then}</span>
       </div>
       <p className="muted small">{t.edit.appendNote}</p>
+      <Target org={org} env={env} error={error} t={t} />
+    </Modal>
+  )
+}
+
+// ---------------------------------------------------------------- edit one rule as XML
+
+const codeProblemText = (problem, t) => {
+  const message = t.edit.ruleCodeProblems[problem.code]
+  return typeof message === 'function' ? message(problem.detail) : message
+}
+
+// The XML of the selected rule (only this <rule> is replaced: same place, same id) or, without `rule`, of
+// the whole ruleset, for rulesets with too many rules to edit visually. It is checked, reviewed as a line
+// diff, and written with the same stale check and Undo as every other ruleset change.
+export function RuleCodeDialog({ rule, ruleset, org, env, busy, error, onApply, onClose, t }) {
+  const before = rule ? ruleCode(ruleset.xml, rule.ruleId) : ruleset.xml.replace(/\r\n/g, '\n').trim()
+  const title = rule ? t.edit.ruleCodeTitle(rule.label) : t.edit.rulesetCodeTitle(ruleset.label)
+  const [draft, setDraft] = useState(before)
+  const [step, setStep] = useState('form')
+  const problem = wellFormedProblem(draft) ?? (rule ? ruleCodeProblem(draft, rule.ruleId) : rulesetCodeProblem(draft)) ?? parserProblem(draft)
+  const close = () => !busy && onClose()
+
+  if (step === 'form')
+    return (
+      <Modal tone="rule" title={title} subtitle={ruleset.label} onClose={close}
+        footer={<>
+          <button onClick={onClose}>{t.edit.cancel}</button>
+          <button className="primary" disabled={Boolean(problem) || draft.trim() === before} onClick={() => setStep('confirm')}>{t.edit.review}</button>
+        </>}>
+        <p className="muted small">{rule ? t.edit.ruleCodeHint : t.edit.rulesetCodeHint}</p>
+        <textarea className="xml-editor" spellCheck={false} aria-label={t.edit.ruleCodeButton} value={draft} onChange={(e) => setDraft(e.target.value)} />
+        {problem && <p className="err">{codeProblemText(problem, t)}</p>}
+      </Modal>
+    )
+  const changes = lineDiff(before, draft.trim().replace(/\r\n/g, '\n'))
+  return (
+    <Modal tone="rule" title={title} subtitle={ruleset.label} onClose={close}
+      footer={<>
+        <button disabled={busy} onClick={() => setStep('form')}>{t.edit.back}</button>
+        <button disabled={busy} onClick={onClose}>{t.edit.cancel}</button>
+        <button className="primary" disabled={busy} onClick={() => onApply(draft)}>{busy ? t.edit.working : t.edit.save}</button>
+      </>}>
+      <p className="preview">{rule ? t.edit.ruleCodeConfirm : t.edit.rulesetCodeConfirm}</p>
+      {!ruleset.kind && <p className="err">{t.edit.ruleCodeUnknownKind}</p>}
+      <details className="xml-diff" open>
+        <summary>{t.edit.identXmlChanges(changes.length)}</summary>
+        <pre>{changes.map((change, i) => <div key={i} className={change.type === '+' ? 'to' : 'from'}>{change.type} {change.text}</div>)}</pre>
+      </details>
       <Target org={org} env={env} error={error} t={t} />
     </Modal>
   )

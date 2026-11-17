@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { loadFromPptb, notify } from './pptb.js'
-import { addMember, removeMember, createQueue, deleteQueue, appendRule, removeRule, buildRuleXml, writeRuleset, errorText, MEMBER_TABLES, QUEUE_TABLES, RULE_TABLES } from './edit.js'
+import { addMember, removeMember, createQueue, deleteQueue, appendRule, removeRule, replaceRule, buildRuleXml, writeRuleset, errorText, MEMBER_TABLES, QUEUE_TABLES, RULE_TABLES } from './edit.js'
 import { runSteps, undoAll, DETAIL_TABLES } from './details.js'
 import { createWorkstream, deleteCreated, WORKSTREAM_TABLES } from './workstream.js'
 import { writeIdentification, IDENTIFICATION_TABLES } from './identification.js'
@@ -9,7 +9,7 @@ import { normGuid } from './rules.js'
 // Edit mode: the open dialog, the change being written and how it ended (error in the dialog, or a
 // toast offering Undo). `focus` centers the map on a new record; `setEditingId` closes the details form.
 export function useEditActions({ snapshot, setSnapshot, t, focus, setEditingId }) {
-  const [dialog, setDialog] = useState(null) // { kind: 'add' | 'confirm' | 'queue' | 'rule' | 'removeRule' | 'workstream' | 'details', ...what that dialog needs }
+  const [dialog, setDialog] = useState(null) // { kind: 'add' | 'confirm' | 'queue' | 'rule' | 'ruleCode' | 'removeRule' | 'workstream' | 'details', ...what that dialog needs }
   const [busy, setBusy] = useState(false)
   const [editError, setEditError] = useState(null)
   const [toast, setToast] = useState(null)
@@ -78,6 +78,9 @@ export function useEditActions({ snapshot, setSnapshot, t, focus, setEditingId }
       return async () => { await writeRuleset(ruleset.guid, next, before); await refreshTables(RULE_TABLES) }
     }, text)
   const applyRule = (ruleset, rule) => writeRules(ruleset, (xml) => appendRule(xml, buildRuleXml(rule)), t.edit.ruleAdded(ruleset.label))
+  // `rule` null: the whole ruleset was edited as code
+  const applyRuleCode = (ruleset, rule, code) =>
+    writeRules(ruleset, (xml) => (rule ? replaceRule(xml, rule.ruleId, code) : code.replace(/\r\n/g, '\n').trim()), rule ? t.edit.ruleCodeSaved(ruleset.label) : t.edit.rulesetCodeSaved(ruleset.label))
   const applyRemoveRule = (ruleset, rule) => writeRules(ruleset, (xml) => removeRule(xml, rule.ruleId), t.edit.ruleRemoved(ruleset.label))
 
   const applyWorkstream = (name, plan) =>
@@ -120,6 +123,6 @@ export function useEditActions({ snapshot, setSnapshot, t, focus, setEditingId }
 
   return {
     dialog, setDialog, openDialog, busy, editError, setEditError, toast, setToast, undo,
-    applyMember, applyQueue, applyRule, applyRemoveRule, applyWorkstream, applyDetails, applyIdentification,
+    applyMember, applyQueue, applyRule, applyRuleCode, applyRemoveRule, applyWorkstream, applyDetails, applyIdentification,
   }
 }

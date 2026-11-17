@@ -88,10 +88,47 @@ export function appendRule(xml, ruleXml) {
   return xml.slice(0, rulesEnd).replace(/\s*$/, '\n') + ruleXml + '\n  ' + xml.slice(rulesEnd)
 }
 
+// One rule's block with the line break before it ([1]) and its indentation ([2]); throws if it is not there.
+function findRule(xml, ruleId) {
+  const pattern = new RegExp(`(\\r?\\n?)([ \\t]*)<rule id="${ruleId.replace(/[^\w-]/g, '')}"[\\s\\S]*?</rule>`)
+  const match = pattern.exec(xml)
+  if (!match) throw Object.assign(new Error('rule not found'), { code: 'ruleNotFound' })
+  return { match, pattern }
+}
+
+export const hasRule = (xml, ruleId) => { try { return Boolean(findRule(xml, ruleId)) } catch { return false } }
+
 export function removeRule(xml, ruleId) {
-  const rulePattern = new RegExp(`\\r?\\n?[ \\t]*<rule id="${ruleId.replace(/[^\w-]/g, '')}"[\\s\\S]*?</rule>`)
-  if (!rulePattern.test(xml)) throw Object.assign(new Error('rule not found'), { code: 'ruleNotFound' })
-  return xml.replace(rulePattern, '')
+  const { pattern } = findRule(xml, ruleId)
+  return xml.replace(pattern, '')
+}
+
+// The XML of one rule as the code editor shows it: its own text, without the ruleset's indentation.
+export function ruleCode(xml, ruleId) {
+  const [block, , indentation] = findRule(xml, ruleId).match
+  return block.replace(/\r\n/g, '\n').replace(/^\n/, '').split('\n').map((line) => (line.startsWith(indentation) ? line.slice(indentation.length) : line)).join('\n')
+}
+
+// Swaps one rule for edited code, keeping its place (rule order is evaluation order) and indentation;
+// the rest of the XML stays byte-identical. A function replacer: `$&` in the code must stay literal.
+export function replaceRule(xml, ruleId, code) {
+  const { match, pattern } = findRule(xml, ruleId)
+  const eol = xml.includes('\r\n') ? '\r\n' : '\n' // definitions stored with CRLF stay CRLF
+  const block = code.replace(/\r\n/g, '\n').trim().split('\n').map((line) => (line ? match[2] + line : line)).join(eol)
+  return xml.replace(pattern, () => match[1] + block)
+}
+
+// Whole ruleset edited as code (well-formedness is checked apart): it must still hold a <rules> list.
+export const rulesetCodeProblem = (code) => (parseXml(code).children[0]?.children.some((child) => child.tag === 'rules') ? null : { code: 'noRules' })
+
+// Problem that would make edited rule code unusable, or null (well-formedness is checked apart): one <rule>
+// with the same id (the map and Undo find it by id) and an <action> to run.
+export function ruleCodeProblem(code, ruleId) {
+  const root = parseXml(code).children[0]
+  if (root?.tag !== 'rule') return { code: 'notRule' }
+  if (root.attrs.id !== ruleId) return { code: 'idChanged' }
+  if (!root.children.some((child) => child.tag === 'action')) return { code: 'noAction' }
+  return null
 }
 
 const normalizeNewlines = (text) => (text ?? '').replace(/\r\n/g, '\n')

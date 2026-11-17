@@ -11,7 +11,8 @@ import { useEditActions } from './useEditActions.js'
 import { Toast } from './dialogs/common.jsx'
 import { MemberDialog } from './dialogs/MemberDialog.jsx'
 import { QueueDialog } from './dialogs/QueueDialog.jsx'
-import { RuleDialog, RemoveRuleDialog } from './dialogs/RuleDialog.jsx'
+import { hasRule } from './edit.js'
+import { RuleDialog, RuleCodeDialog, RemoveRuleDialog } from './dialogs/RuleDialog.jsx'
 import { WorkstreamDialog } from './dialogs/WorkstreamDialog.jsx'
 import { DetailsForm, DetailsDialog } from './dialogs/DetailsDialog.jsx'
 import { IdentificationDialog } from './dialogs/IdentificationDialog.jsx'
@@ -77,7 +78,7 @@ export default function App() {
   const focus = (id) => { setFocusId(id); setSelectedId(id) }
   const {
     dialog, setDialog, openDialog, busy, editError, setEditError, toast, setToast, undo,
-    applyMember, applyQueue, applyRule, applyRemoveRule, applyWorkstream, applyDetails, applyIdentification,
+    applyMember, applyQueue, applyRule, applyRuleCode, applyRemoveRule, applyWorkstream, applyDetails, applyIdentification,
   } = useEditActions({ snapshot, setSnapshot, t, focus, setEditingId })
 
   useEffect(() => {
@@ -127,6 +128,9 @@ export default function App() {
   if (!graph) return <div className="empty">{inPptb() ? t.text.noConnection : t.text.noData}</div>
   const selected = graph.nodes.find((node) => node.id === selectedId)
   const canEditSelected = edit && selected && recordOf(snapshot.raw, selected)
+  // the ruleset a selected rule or ruleset belongs to. The code editor needs no contract knowledge, so it opens on any
+  // ruleset with XML (the visual add/remove rule buttons stay limited to route/classification rulesets, the ones with a `kind`)
+  const selectedRuleset = selected?.type === 'rule' ? graph.nodes.find((node) => node.id === selected.rulesetId) : selected?.type === 'ruleset' ? selected : null
   const panelName = selected?.label ?? t.text.detailsPanel
   // re-read everything from the same connection, keeping what is selected and where the map is
   const refresh = () => {
@@ -238,6 +242,9 @@ export default function App() {
               <div className="detail-actions">
                 {selected.id !== focusId && <button onClick={() => focus(selected.id)}>{t.text.centerHere}</button>}
                 {canEditSelected && editingId !== selected.id && <button className="primary" onClick={() => setEditingId(selected.id)}>✎ {t.edit.editDetails}</button>}
+                {edit && selectedRuleset?.xml?.trim() && (selected.type === 'ruleset' || hasRule(selectedRuleset.xml, selected.ruleId)) && (
+                  <button className="primary" onClick={() => openDialog({ kind: 'ruleCode', rule: selected.type === 'rule' ? selected : null, ruleset: selectedRuleset })}>✎ {t.edit.ruleCodeButton}</button>
+                )}
                 {canEditSelected && selected.type === 'workstream' && editingId !== selected.id && canEditSelected.msdyn_recordidentificationrule?.trim() && (
                   <button onClick={() => openDialog({ kind: 'identification', workstream: selected })}>✎ {t.edit.identButton}</button>
                 )}
@@ -276,6 +283,10 @@ export default function App() {
       {dialog?.kind === 'identification' && (
         <IdentificationDialog workstream={dialog.workstream} raw={snapshot.raw} {...dialogProps}
           onApply={(before, next) => applyIdentification(dialog.workstream, before, next)} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.kind === 'ruleCode' && (
+        <RuleCodeDialog rule={dialog.rule} ruleset={dialog.ruleset} {...dialogProps}
+          onApply={(code) => applyRuleCode(dialog.ruleset, dialog.rule, code)} onClose={() => setDialog(null)} />
       )}
       {dialog?.kind === 'removeRule' && (
         <RemoveRuleDialog rule={dialog.rule} ruleset={dialog.ruleset} {...dialogProps}
