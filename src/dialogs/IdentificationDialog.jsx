@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { parseIdentification, rewriteIdentification, describeIdentification, valueOptions, valueLabel, operatorText, isConversationValue, takesValue, FIXED_OPERATORS, tableColumns, formatXml, xmlProblem, lineDiff } from '../identification.js'
+import { parseIdentification, rewriteIdentification, describeIdentification, valueOptions, valueLabel, operatorText, isConversationValue, takesValue, FIXED_OPERATORS, tableColumns, formatXml, xmlProblem, parserProblem, lineDiff } from '../identification.js'
 import { recordOf } from '../details.js'
 import { Modal, Target } from './common.jsx'
 
@@ -113,12 +113,6 @@ function TableChanges({ before, after, t }) {
 }
 
 
-// The browser's own XML parser as a second opinion on well-formedness (not available under node).
-function parserProblem(xml) {
-  if (typeof DOMParser === 'undefined') return null
-  const error = new DOMParser().parseFromString(xml, 'application/xml').querySelector('parsererror')
-  return error && { code: 'notWellFormed', detail: error.textContent.trim().split('\n')[0].slice(0, 120) }
-}
 const problemText = (problem, t) => {
   const message = t.edit.identXmlProblems[problem.code]
   return typeof message === 'function' ? message(problem.detail) : message

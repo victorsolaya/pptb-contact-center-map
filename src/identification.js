@@ -184,9 +184,15 @@ export function formatXml(xml) {
   return lines.join('\n')
 }
 
-// First problem that would make the column unusable, or null: not well formed, or not the shape the
-// runtime reads (a rule set, rules with PrimaryEntity, fetch/entity and ContextKey, one preferred table).
-export function xmlProblem(xml) {
+// The browser's own XML parser as a second opinion on well-formedness (not available under node).
+export function parserProblem(xml) {
+  if (typeof DOMParser === 'undefined') return null
+  const error = new DOMParser().parseFromString(xml, 'application/xml').querySelector('parsererror')
+  return error && { code: 'notWellFormed', detail: error.textContent.trim().split('\n')[0].slice(0, 120) }
+}
+
+// Tags and text of `xml` not closed, mismatched or outside the single root element: { code: 'notWellFormed', detail } or null.
+export function wellFormedProblem(xml) {
   const open = []
   let roots = 0
   for (const [token] of normalizeNewlines(xml).matchAll(TOKEN)) {
@@ -205,6 +211,14 @@ export function xmlProblem(xml) {
     if (!tag[4]) open.push(tag[2])
   }
   if (open.length) return { code: 'notWellFormed', detail: `<${open.at(-1)}>` }
+  return null
+}
+
+// First problem that would make the column unusable, or null: not well formed, or not the shape the
+// runtime reads (a rule set, rules with PrimaryEntity, fetch/entity and ContextKey, one preferred table).
+export function xmlProblem(xml) {
+  const malformed = wellFormedProblem(xml)
+  if (malformed) return malformed
   const root = parseXml(normalizeNewlines(xml)).children[0]
   if (root?.tag !== 'RecordIdentificationRuleSet') return { code: 'noRuleSet' }
   const rules = root.children.filter((child) => child.tag === 'RecordIdentificationRule')

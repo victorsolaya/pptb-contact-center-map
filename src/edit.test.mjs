@@ -36,7 +36,7 @@ assert.equal(snapshot.environment, 'UAT')
 console.log('edit ok')
 
 // ---------------------------------------------------------------- rules
-const { buildRuleXml, appendRule, removeRule, rulesetKind, contractVariables, writeRuleset, createQueue, deleteQueue } = await import('./edit.js')
+const { buildRuleXml, appendRule, removeRule, replaceRule, ruleCode, ruleCodeProblem, rulesetCodeProblem, rulesetKind, contractVariables, writeRuleset, createQueue, deleteQueue } = await import('./edit.js')
 const { parseRules } = await import('./rules.js')
 
 const base = `<decision hit-policy="all" version="1">
@@ -68,6 +68,22 @@ assert.throws(() => removeRule(base, 'nope'))
 // definitions stored with CRLF: removing a rule leaves no stray \r
 const toCrlf = (text) => text.replace(/\n/g, '\r\n')
 assert.equal(removeRule(toCrlf(next), 'r-2'), toCrlf(base))
+// edit one rule as code: shown dedented, swapped in place, the rest byte-identical, same id required
+const code = ruleCode(next, 'r-2')
+assert.ok(code.startsWith('<rule id="r-2"') && code.endsWith('</rule>') && !code.includes('\r'), 'code starts at <rule>, no indentation')
+assert.equal(replaceRule(next, 'r-2', code), next, 'unchanged code leaves the ruleset byte for byte')
+assert.equal(ruleCode(toCrlf(next), 'r-2'), code, 'CRLF definitions show the same code')
+const edited = replaceRule(next, 'r-1', ruleCode(next, 'r-1').replace('q-1', () => 'q-$&-9'))
+assert.equal(parseRules(edited)[0].set[0].value, 'q-$&-9', '$ in the code stays literal')
+assert.equal(ruleCode(edited, 'r-2'), code, 'other rules untouched')
+assert.equal(replaceRule(toCrlf(next), 'r-1', ruleCode(next, 'r-1')), toCrlf(next), 'CRLF ruleset stays CRLF after an edit')
+assert.equal(ruleCodeProblem(code, 'r-2'), null)
+assert.equal(ruleCodeProblem(code, 'r-3')?.code, 'idChanged')
+assert.equal(ruleCodeProblem('<foo/>', 'r-2')?.code, 'notRule')
+assert.equal(ruleCodeProblem('<rule id="r-2"></rule>', 'r-2')?.code, 'noAction')
+assert.throws(() => replaceRule(base, 'nope', code))
+assert.equal(rulesetCodeProblem(base), null)
+assert.equal(rulesetCodeProblem('<decision></decision>')?.code, 'noRules')
 // classification rule without conditions, into an empty ruleset
 const classification = appendRule('<decision hit-policy="first" version="1"><rules /></decision>', buildRuleXml({ id: 'c-1', name: 'Default', sets: [{ attr: 'liveworkitemcontext.tier', value: 'gold' }] }))
 assert.deepEqual(parseRules(classification).map((rule) => [rule.when, rule.set[0].attr, rule.set[0].value]), [['', 'liveworkitemcontext.tier', 'gold']])
